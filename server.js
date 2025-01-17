@@ -5,6 +5,7 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/products'); // Import productRoutes
 const cartRoutes = require('./routes/cart');
 const { protect, admin } = require('./middleware/authMiddleware');
+const cors = require('cors');
 
 
 dotenv.config();
@@ -13,6 +14,7 @@ connectDB();
 
 const app = express();
 app.use(express.json());
+app.use(cors())
 
 app.get('/', (req, res) => res.send('API is running...'));
 
