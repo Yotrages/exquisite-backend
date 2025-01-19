@@ -1,5 +1,7 @@
 const express = require('express');
 const Product = require('../Models/Product');
+const multer = require('multer');
+const path = require('path');
 const jwt = require('jsonwebtoken');
 const multer = require("multer");
 const fs = require('fs');
@@ -9,29 +11,23 @@ const path = require('path');
 const router = express.Router();
 
 
+
 const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (allowedMimeTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, '/data/uploads');  // Path to Render's persistent volume
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + '-' + file.originalname);
     }
-  },
+  })
 });
-
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 
 // Middleware to Verify Admin
 const verifyAdmin = (req, res, next) => {
-  // Extract the token from the authorization header
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('Received Token:', token);  // Log the raw token
+  console.log('Received Token:', token); 
 
   // If no token is provided
   if (!token) {
@@ -43,7 +39,7 @@ const verifyAdmin = (req, res, next) => {
     // Verify token
     console.log('JWT_SECRET in middleware:', process.env.JWT_SECRET_TOKEN);
     const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
-    console.log('Decoded Token:', decoded);  // Log the decoded payload
+    console.log('Decoded Token:', decoded);  
 
     // Check if the user is admin
     if (!decoded.isAdmin) {
@@ -114,11 +110,11 @@ router.get('/get', async (req, res) => {
 
 // Search Products by Title
 router.get('/search', async (req, res) => {
-    const { query } = req.query; // Get the search term from the query parameters
+    const { query } = req.query; 
   
     try {
       const products = await Product.find({
-        name: { $regex: query, $options: 'i' }, // Case-insensitive search
+        name: { $regex: query, $options: 'i' }, 
       });
   
       if (products.length === 0) {
@@ -131,4 +127,7 @@ router.get('/search', async (req, res) => {
     }
   });
   
-module.exports = router;
+  module.exports = {
+    router,
+    storage
+  };
