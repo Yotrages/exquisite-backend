@@ -36,7 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/cart', cartRoutes);
 
 // Product routes
-app.use('/api/products', productRoutes); // Register the product routes
+app.use('/api/products', productRoutes); 
 
 const PORT = process.env.PORT || 5000;
 

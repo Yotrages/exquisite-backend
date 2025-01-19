@@ -1,28 +1,25 @@
 const express = require('express');
 const Product = require('../Models/Product');
 const multer = require('multer');
-const path = require('path');
 const jwt = require('jsonwebtoken');
-const multer = require("multer");
-const fs = require('fs');
 const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
 
 
 const router = express.Router();
 
 
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, '/data/uploads');  // Path to Render's persistent volume
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-  })
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+      folder: 'product-images', // Change folder name if needed
+      allowed_formats: ['jpeg', 'png', 'jpg'],
+  },
 });
+
+const upload = multer({ storage });
 
 // Middleware to Verify Admin
 const verifyAdmin = (req, res, next) => {
