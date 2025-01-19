@@ -54,7 +54,7 @@ const verifyAdmin = (req, res, next) => {
 
 // Admin: Post Product
 router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
-  const { name, price, quantity } = req.body;
+  const { name, description, price, quantity } = req.body;
   const image = req.file; 
 
   try {
@@ -64,6 +64,7 @@ router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
 
     const newProduct = new Product({
       name,
+      description,
      price: parseFloat(price),
       quantity: parseInt(quantity),
       image: image.path, 
