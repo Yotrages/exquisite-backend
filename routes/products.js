@@ -1,8 +1,23 @@
 const express = require('express');
 const Product = require('../Models/Product');
 const jwt = require('jsonwebtoken');
+const multer = require("multer");
 
 const router = express.Router();
+
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Folder where files will be saved
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+// Initialize multer with storage configuration
+const upload = multer({ storage });
 
 // Middleware to Verify Admin
 const verifyAdmin = (req, res, next) => {
@@ -38,15 +53,26 @@ const verifyAdmin = (req, res, next) => {
 
 
 // Admin: Post Product
-router.post('/post', verifyAdmin, async (req, res) => {
-  const { name, description, price, quantity, image } = req.body;
+router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
+  const { name, price, quantity } = req.body;
+  const image = req.file; 
 
   try {
-    const newProduct = new Product({ name, description, price, quantity, image });
+    if (!image) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    const newProduct = new Product({
+      name,
+     price: parseFloat(price),
+      quantity: parseInt(quantity),
+      image: image.path, 
+    });
+
     await newProduct.save();
-    res.status(201).json({ message: 'Product posted successfully!', product: newProduct });
+    res.status(201).json({ message: "Product posted successfully!", product: newProduct });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to post product!', details: err.message });
+    res.status(500).json({ error: "Failed to post product!", details: err.message });
   }
 });
 
