@@ -2,22 +2,30 @@ const express = require('express');
 const Product = require('../Models/Product');
 const jwt = require('jsonwebtoken');
 const multer = require("multer");
+const fs = require('fs');
+const path = require('path');
+
 
 const router = express.Router();
 
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Folder where files will be saved
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
+    }
   },
 });
 
-// Initialize multer with storage configuration
-const upload = multer({ storage });
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 
 // Middleware to Verify Admin
 const verifyAdmin = (req, res, next) => {
@@ -58,15 +66,20 @@ router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
   const image = req.file; 
 
   try {
-    if (!image) {
-      return res.status(400).json({ message: "Image is required" });
-    }
+    
+    console.log(req.file);
+ if (!req.file) {
+  return res.status(400).json({ message: "Image upload failed" });
+}
+
+console.log(req.body, req.file);
+
 
     const newProduct = new Product({
       name,
       description,
-     price: parseFloat(price),
-      quantity: parseInt(quantity),
+     price,
+      quantity,
       image: image.path, 
     });
 
