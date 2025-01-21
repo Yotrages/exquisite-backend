@@ -4,8 +4,10 @@ const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/products'); // Import productRoutes
 const cartRoutes = require('./routes/cart');
+const contact = require('./routes/contact')
 const { protect, admin } = require('./middleware/authMiddleware');
 const cors = require('cors');
+const bodyParser = require('body-parser')
 
 
 dotenv.config();
@@ -27,6 +29,7 @@ const initializeApp = async () => {
 const app = express();
 app.use(express.json());
 app.use(cors())
+app.use(bodyParser.json())
 
 app.get('/', (req, res) => res.send('API is running...'));
 
@@ -37,6 +40,9 @@ app.use('/api/cart', cartRoutes);
 
 // Product routes
 app.use('/api/products', productRoutes); 
+
+// contact routes
+app.use('/api/contact', contact)
 
 const PORT = process.env.PORT || 5000;
 
