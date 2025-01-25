@@ -143,4 +143,24 @@ router.put('/put/:id', async (req, res) => {
     res.status(500).json({ message: 'Failed to update product'})
   }
 })
+
+router.get("/get/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the product by ID
+    const product = await Product.findById(id);
+
+    // If no product is found, return an error
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Return the product details
+    res.status(200).json({ success: true, product });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 module.exports = router;
