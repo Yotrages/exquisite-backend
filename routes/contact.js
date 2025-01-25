@@ -12,17 +12,15 @@ router.post("/", async (req, res) => {
             message: "All fields are required"
         })
     }
-        // Set up Nodemailer transporter
         let transporter = nodemailer.createTransport({
             host: "smtp.gmail.com",
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL, // Use Vercel environment variables
+                user: process.env.EMAIL, 
                 pass: process.env.EMAIL_PASS
             }
         });
     
-        // Set up email options
         let mailOptions = {
             from: process.env.EMAIL,
             to: process.env.EMAIL, 

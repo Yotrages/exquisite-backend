@@ -4,7 +4,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Checkout: Create payment
 router.post('/checkout', protect, async (req, res) => {
   const { items, totalAmount, paymentMethod } = req.body;
 
@@ -27,7 +26,6 @@ router.post('/checkout', protect, async (req, res) => {
   }
 });
 
-// Update Payment (PayPal or Paystack)
 router.put('/:id/pay', protect, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id);
@@ -36,7 +34,7 @@ router.put('/:id/pay', protect, async (req, res) => {
 
     payment.isPaid = true;
     payment.paidAt = Date.now();
-    payment.paymentResult = req.body; // Contains details like PayPal or Paystack response
+    payment.paymentResult = req.body; 
 
     const updatedPayment = await payment.save();
     res.status(200).json(updatedPayment);
@@ -45,7 +43,7 @@ router.put('/:id/pay', protect, async (req, res) => {
   }
 });
 
-// Get Payment Details
+
 router.get('/:id', protect, async (req, res) => {
   try {
     const payment = await Payment.findById(req.params.id).populate('items.product');
