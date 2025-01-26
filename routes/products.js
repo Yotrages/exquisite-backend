@@ -130,20 +130,31 @@ router.delete('/delete/:id', async (req, res) => {
 })
 
 
-router.put('/put/:id', async (req, res) => {
+router.put('/put/:id', upload.single('image'), async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, quantity, image } = req.body; 
-  const updates = { ...req.body }; 
+  const { name, description, price, quantity } = req.body; // Exclude `image` from body
+  let image = req.file; // This will have the uploaded file information if provided
 
   try {
-      const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true });
-      if (!updatedProduct) {
-          return res.status(404).json({ message: 'Product not found' });
-      }
+    // If an image is provided, handle its upload to a service like Cloudinary or save it locally
+    if (image) {
+      const uploadedImage = await uploadImageToCloudinary(image.buffer); // Custom function
+      image = uploadedImage.url; // Assume Cloudinary returns a URL
+    }
 
-      res.status(200).json({ message: 'Product updated successfully', product: updatedProduct });
+    // Prepare updates
+    const updates = { name, description, price, quantity };
+    if (image) updates.image = image;
+
+    // Update product in database
+    const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true });
+    if (!updatedProduct) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({ message: 'Product updated successfully', product: updatedProduct });
   } catch (error) {
-      res.status(500).json({ message: 'Error updating product', error: error.message });
+    res.status(500).json({ message: 'Error updating product', error: error.message });
   }
 });
 
