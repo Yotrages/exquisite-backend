@@ -130,19 +130,23 @@ router.delete('/delete/:id', async (req, res) => {
 })
 
 
-router.put('/put/:id', async (req, res) => {
-  const updates = req.body
-  const { id } = req.params
+router.put('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, description, price, quantity, image } = req.body; 
+  const updates = { ...req.body }; 
+
   try {
-    const updatedItem = await Product.findByIdAndUpdate(id, updates, {new: true})
-    if (!updatedItem) {
-      return res.status(404).json({ message: 'Product not found'})
-    }
-    res.status(200).json({ message: 'Product updated successfully', product: updatedItem})
+      const updatedProduct = await Product.findByIdAndUpdate(id, updates, { new: true });
+      if (!updatedProduct) {
+          return res.status(404).json({ message: 'Product not found' });
+      }
+
+      res.status(200).json({ message: 'Product updated successfully', product: updatedProduct });
   } catch (error) {
-    res.status(500).json({ message: 'Failed to update product'})
+      res.status(500).json({ message: 'Error updating product', error: error.message });
   }
-})
+});
+
 
 router.get("/get/:id", async (req, res) => {
   const { id } = req.params;
