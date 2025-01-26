@@ -130,7 +130,7 @@ router.delete('/delete/:id', async (req, res) => {
 })
 
 
-router.put('/:id', async (req, res) => {
+router.put('/put/:id', async (req, res) => {
   const { id } = req.params;
   const { name, description, price, quantity, image } = req.body; 
   const updates = { ...req.body }; 
