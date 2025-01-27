@@ -148,14 +148,19 @@ router.put(
             folder: 'product-images',
           })
           imageUrl = answer.secure_url;
-        }     
+        }  
+        
+        const updatedFields = {
+          ...(name && { name }),
+        ...(description && { description }),
+        ...(price && { price }),
+        ...(quantity && { quantity }),
+        ...(imageUrl && {image: imageUrl}),
+        }
 
       const result = await Product.findByIdAndUpdate(id, 
-        name,
-        description,
-        price,
-        quantity,
-        ...(imageUrl && {image: imageUrl})
+        updatedFields,
+        {new: true}
       );
 
       res.status(200).json({ success: true, product: result });
