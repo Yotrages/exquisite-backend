@@ -131,7 +131,7 @@ router.delete('/delete/:id', async (req, res) => {
 
 
 router.put(
-  "/update-product/:id",
+  "/put/:id",
   verifyAdmin,
   upload.single("image"),
   async (req, res) => {
