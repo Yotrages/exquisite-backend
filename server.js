@@ -14,14 +14,8 @@ dotenv.config();
 console.log('JWT Secret:', process.env.JWT_SECRET_TOKEN);
 const initializeApp = async () => {
     await connectDB();
-  
-    // Create the text index for the Product model
-    try {
-      await Product.createIndexes({ name: 'text' });
-      console.log('Text index created for Product model.');
-    } catch (error) {
-      console.error('Error creating text index:', error.message);
-    }
+
+    
   };
   
   initializeApp();
