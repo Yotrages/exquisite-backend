@@ -141,18 +141,22 @@ router.put(
 
       const { id } = req.params;
       const { name, description, price, quantity } = req.body;
+        
+      let imageUrl;
+        if (req.file) {
+          const answer = await cloudinary.uploader.upload(req.file.path, {
+            folder: 'product-images',
+          })
+          imageUrl = answer.secure_url;
+        }     
 
-      // Logic to update the product in the database
-      const updatedProduct = {
+      const result = await Product.findByIdAndUpdate(id, 
         name,
         description,
         price,
         quantity,
-        image: req.file.path, // Assuming `path` contains the Cloudinary URL
-      };
-
-      // Perform the database update (replace this with your DB logic)
-      const result = await Product.findByIdAndUpdate(id, updatedProduct, { new: true });
+        ...(imageUrl && {image: imageUrl})
+      );
 
       res.status(200).json({ success: true, product: result });
     } catch (error) {
