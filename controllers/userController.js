@@ -47,7 +47,7 @@ const loginUser = async (req, res) => {
 
         const user = await User.findOne({ email });
         if (!user) {
-            return res.status(400).json({ message: 'This account does not exist'})
+            return res.status(400).json({ message: 'Invalid credentials'})
         }
         const matchPassword = await bcrypt.compare(password, user.password)
 
@@ -55,6 +55,7 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials'})
         }
 
+            
         if (user && matchPassword) {
             console.log('Password matched');
             res.status(200).json({
@@ -62,16 +63,8 @@ const loginUser = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin,
+                token: user.isAdmin === true && generateToken(user.id, user.isAdmin),
             });
-        } else if (user.isAdmin === true && matchPassword) {
-            console.log('Password matched, generating token')
-            res.status(200).json({
-                _id: user.id,
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                token: generateToken(user.id, user.isAdmin),
-            })
         } else {
             console.error('Invalid email or password');
             res.status(401).json({ message: 'Invalid email or password' });
