@@ -28,7 +28,6 @@ const verifyAdmin = (req, res, next) => {
   }
 
   try {
-    console.log("JWT_SECRET in middleware:", process.env.JWT_SECRET_TOKEN);
     const decoded = jwt.verify(token, process.env.JWT_SECRET_TOKEN);
     console.log("Decoded Token:", decoded);
 

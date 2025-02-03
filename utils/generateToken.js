@@ -13,11 +13,4 @@ const generateToken = (id, isAdmin) => {
   );
 };
 
-// Example of generating an admin token
-const userId = 'adminUserId';  // Use a real admin user ID here
-const isAdmin = true; // Admin flag is true for the admin user
-
-const token = generateToken(userId, isAdmin);
-console.log('Generated JWT Token for Admin:', token);
-
 module.exports = generateToken;

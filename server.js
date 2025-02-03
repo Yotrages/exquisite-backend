@@ -13,9 +13,7 @@ const bodyParser = require('body-parser')
 dotenv.config();
 console.log('JWT Secret:', process.env.JWT_SECRET_TOKEN);
 const initializeApp = async () => {
-    await connectDB();
-
-    
+    await connectDB(); 
   };
   
   initializeApp();

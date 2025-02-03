@@ -32,6 +32,7 @@ router.post('/notify', async (req, res) => {
     } catch (error) {
      res.status(500).json({ message: 'Error sending notifications' })   
     }
+
     const sendMail = async (to, subject, message) => {
         const mail = nodemailer.createTransport({
             service: 'gmail',

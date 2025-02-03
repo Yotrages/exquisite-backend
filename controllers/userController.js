@@ -1,5 +1,6 @@
 const User = require('../Models/User');
 const generateToken = require('../utils/generateToken');
+const bcrypt = require('bcryptjs')
 
     // Register User
 const registerUser = async (req, res) => {
@@ -16,8 +17,10 @@ const registerUser = async (req, res) => {
             name,
             email,
             password,
-            isAdmin,  // This allows you to create an admin user
+            isAdmin,  
         });
+        const salt = await bcrypt.genSalt(10)
+        user.password = await bcrypt.hash(password, salt)
 
         if (user) {
             res.status(201).json({
@@ -41,20 +44,34 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        console.log('Login request received:', { email, password }); // Debug log
 
         const user = await User.findOne({ email });
-        console.log('Fetched user:', user); // Debug log
+        if (!user) {
+            return res.status(400).json({ message: 'This account does not exist'})
+        }
+        const matchPassword = await bcrypt.compare(password, user.password)
 
-        if (user && (await user.matchPassword(password))) {
-            console.log('Password matched, generating token');
-            res.json({
+        if (!matchPassword) {
+            return res.status(400).json({ message: 'Invalid credentials'})
+        }
+
+        if (user && matchPassword) {
+            console.log('Password matched');
+            res.status(200).json({
+                _id: user.id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+            });
+        } else if (user.isAdmin === true && matchPassword) {
+            console.log('Password matched, generating token')
+            res.status(200).json({
                 _id: user.id,
                 name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin,
                 token: generateToken(user.id, user.isAdmin),
-            });
+            })
         } else {
             console.error('Invalid email or password');
             res.status(401).json({ message: 'Invalid email or password' });
