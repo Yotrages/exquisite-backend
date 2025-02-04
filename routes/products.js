@@ -73,19 +73,20 @@ router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
 });
 
 router.get("/get", async (req, res) => {
-  let page = parseInt(req.query.page, 10) || 1;
-  let limit = parseInt(req.query.limit, 10);
-  if (isNaN(limit)) {
-    limit = 15;
-  }
-  let skip = (page - 1) * limit;
-
-  console.log(`Received request: page=${page}, limit=${limit}, skip=${skip}`);
+  // Convert query parameters to numbers explicitly.
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 15;
+  const skip = (page - 1) * limit;
+  
+  // Debug: log the computed values.
+  console.log(`Request params: page=${page}, limit=${limit}, skip=${skip}`);
   
   try {
-    const products = await Product.find().skip(skip).limit(limit).sort({ createdAt: -1 });
+    const products = await Product.find().skip(skip).limit(limit);
+      
     const total = await Product.countDocuments();
     const totalPages = Math.ceil(total / limit);
+    
     res.status(200).json({
       products,
       currentPage: page,
