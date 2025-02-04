@@ -73,17 +73,19 @@ router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
 });
 
 router.get("/get", async (req, res) => {
-  let page = parseInt(req.query.page) || 15;
-  let limit = 15;
+  let page = parseInt(req.query.page) || 1;
+  let limit = (req.query.limit) || 15;
+  let skip = (page - 1) * limit;
 
   try {
-    const products = await Product.find().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit);
+    const products = await Product.find().skip(skip).limit(limit).sort({ createdAt: -1 });
 
     const total = await Product.countDocuments();
+    const totalPages = Math.ceil(total / limit)
     res.status(200).json({
       products,
       currentPage: page,
-      totalPages: Math.ceil(total / limit),
+      totalPages,
     });
   } catch (err) {
     res
