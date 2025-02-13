@@ -3,9 +3,7 @@ const nodemailer = require('nodemailer')
 const router = express.Router()
 
 router.post("/", async (req, res) => {
-    console.log(req, "This is the request")
     const { name, email, subject, message } = req.body
-    console.log(name, email, subject, message, "These are the data received from the backend")
     if(!name || !email || !subject || !message) {
         return res.status(400).json({
             success: false,
@@ -22,10 +20,51 @@ router.post("/", async (req, res) => {
         });
     
         let mailOptions = {
-            from: process.env.EMAIL,
+            from: email,
             to: process.env.EMAIL, 
             subject: `Contact Form Submission: ${subject}`,
-            text: `You have received a new message from ${name}. \n\n Email: ${email} \n Subject: ${subject} \n Message: \n ${message}`
+            text: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+</head>
+<style>
+    .name {
+        color: white;
+        font-style: italic;
+    }
+    .subject {
+        font-style: italic;
+        font-weight: 800;
+        font-size: 17px;
+    }
+    .message {
+        font-weight: 600;
+        background-color: #f2f2f2;
+        color: black !important;
+        letter-spacing: 1.5px;
+    }
+    body{
+        background-color: black;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        color: white;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        height: fit-content;
+    }
+</style>
+<body>
+    <div class="name">You have received a new message from ${name}</div>
+    <div class="subject"><span style="color: green;">Subject:</span> ${subject}</div>
+    <div class="message">${message}</div>
+</body>
+</html>`
         };
         try {
             await transporter.sendMail(mailOptions);

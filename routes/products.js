@@ -2,7 +2,6 @@ const express = require("express");
 const Product = require("../Models/Product");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
-const path = require("path");
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const cloudinary = require("../config/cloudinary");
 
@@ -11,12 +10,12 @@ const router = express.Router();
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "product-images",
-    allowed_formats: ["jpeg", "png", "jpg"],
-  },
-});
+    folder: 'product-images',
+    allowedFormats: ['jpeg', 'png', 'jpg', 'gif', 'webp', 'svg', 'mp4']
+  }
+})
 
-const upload = multer({ storage });
+const upload = multer({ storage })
 
 const verifyAdmin = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
@@ -73,16 +72,15 @@ router.post("/post", verifyAdmin, upload.single("image"), async (req, res) => {
 });
 
 router.get("/get", async (req, res) => {
-  // Convert query parameters to numbers explicitly.
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 15;
   const skip = (page - 1) * limit;
+  // URL/get?page=${currentPage}&limit=limit
   
-  // Debug: log the computed values.
   console.log(`Request params: page=${page}, limit=${limit}, skip=${skip}`);
   
   try {
-    const products = await Product.find().skip(skip).limit(limit);
+    const products = await Product.find().skip(skip).limit(limit).sort({dateAdded: -1});
       
     const total = await Product.countDocuments();
     const totalPages = Math.ceil(total / limit);
@@ -100,7 +98,7 @@ router.get("/get", async (req, res) => {
 
 router.get("/search", async (req, res) => {
   const { query } = req.query;
-
+  // URL/search?query=${searchTerm}
   try {
     const products = await Product.find({
       name: { $regex: query, $options: "i" },

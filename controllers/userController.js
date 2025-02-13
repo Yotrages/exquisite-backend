@@ -55,15 +55,15 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials'})
         }
 
-            
+            const check = user.isAdmin === true && generateToken(user.id, user.isAdmin)
         if (user && matchPassword) {
-            console.log('Password matched');
+            console.log('Credentials matched');
             res.status(200).json({
                 _id: user.id,
                 name: user.name,
                 email: user.email,
                 isAdmin: user.isAdmin,
-                token: user.isAdmin === true && generateToken(user.id, user.isAdmin),
+                token: check
             });
         } else {
             console.error('Invalid email or password');

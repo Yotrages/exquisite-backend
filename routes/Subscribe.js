@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
     try {
         res.status(201).json({ message: 'Subscription successful'})
     } catch (error) {
-        if (error.code === 11000) {
+        if (error.code === 1100) {
             res.status(400).json({ message: 'Email already in use' });  
         }
         res.status(500).json({ message: 'Server error, subscription failed'})
@@ -46,7 +46,44 @@ router.post('/notify', async (req, res) => {
             from: process.env.EMAIL,
             to,
             subject,
-            text: message
+            text: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+</head>
+<style>
+
+    .subject {
+        font-style: italic;
+        font-weight: 800;
+        font-size: 17px;
+    }
+    .message {
+        font-weight: 600;
+        background-color: #f2f2f2;
+        color: black !important;
+        letter-spacing: 1.5px;
+    }
+    body{
+        background-color: black;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        color: white;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        height: fit-content;
+    }
+</style>
+<body>
+    <div class="subject"><span style="color: green;">Subject:</span> ${subject}</div>
+    <div class="message">${message}</div>
+</body>
+</html>`
         })
         
         try {
