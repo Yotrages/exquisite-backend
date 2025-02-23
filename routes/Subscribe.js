@@ -105,3 +105,5 @@ router.post('/notify', async (req, res) => {
         }
     }
 })
+
+module.exports = router

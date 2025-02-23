@@ -75,7 +75,6 @@ router.get("/get", async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 15;
   const skip = (page - 1) * limit;
-  // URL/get?page=${currentPage}&limit=limit
   
   console.log(`Request params: page=${page}, limit=${limit}, skip=${skip}`);
   
@@ -98,7 +97,6 @@ router.get("/get", async (req, res) => {
 
 router.get("/search", async (req, res) => {
   const { query } = req.query;
-  // URL/search?query=${searchTerm}
   try {
     const products = await Product.find({
       name: { $regex: query, $options: "i" },
@@ -116,18 +114,25 @@ router.get("/search", async (req, res) => {
   }
 });
 
-router.delete('/delete/:id', async (req, res) => {
-  const { id } = req.params.id
+router.delete("/delete/:id", async (req, res) => {
+  const id = req.params.id; 
   try {
-    const deletedProducts = await Product.findOneAndDelete(id)
-    if (!deletedProducts) {
-      return res.status(404).json({ message: 'Product not found' });
-    } 
-    res.status(200).json({ message: 'Product deleted successfully', products: deletedProducts});
+    const deletedProduct = await Product.findOneAndDelete({ _id: id });
+
+    if (!deletedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json({ 
+      message: "Product deleted successfully", 
+      deletedProduct // Return deleted product
+    });
+
   } catch (error) {
-    res.status(500).json({ message: 'Failed to delete product'})
+    res.status(500).json({ message: "Failed to delete product", error: error.message });
   }
-})
+});
+
 
 
 router.put(

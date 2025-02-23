@@ -7,6 +7,7 @@ const cartRoutes = require('./routes/cart');
 const contact = require('./routes/contact')
 const { protect, admin } = require('./middleware/authMiddleware');
 const cors = require('cors');
+const subscribe = require('./routes/Subscribe')
 const bodyParser = require('body-parser')
 
 
@@ -35,6 +36,7 @@ app.use('/api/products', productRoutes);
 
 // contact routes
 app.use('/api/contact', contact)
+app.use('/api/subscribe', subscribe)
 
 const PORT = process.env.PORT || 5000;
 
