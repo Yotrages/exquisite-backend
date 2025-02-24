@@ -11,7 +11,7 @@ router.post('/', async (req, res) => {
     try {
         res.status(201).json({ message: 'Subscription successful'})
     } catch (error) {
-        if (error.code === 1100) {
+        if (error.code === 11000) {
             res.status(400).json({ message: 'Email already in use' });  
         }
         res.status(500).json({ message: 'Server error, subscription failed'})
@@ -51,21 +51,32 @@ const sendMail = async (to, subject, message) => {
     };
 
     try {
-        await mail.sendMail(mailOptions);
+        const info = await mail.sendMail(mailOptions);
+        console.log(`✅ Email sent successfully to ${to}:`, info.response);
         return { success: true };
     } catch (error) {
-        console.error("Error sending email:", error);
-        return { success: false, error };
+        console.error(`❌ Error sending email to ${to}:`, error.message);
+        return { success: false, error: error.message };
     }
 };
 
 
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const getSubscriber = async (subject, message) => {
     const subscribers = await Subscribe.find();
-    const emailPromises = subscribers.map((subscriber) => sendMail(subscriber.email, subject, message));
+    const results = [];
 
-    return await Promise.all(emailPromises);
+    for (const subscriber of subscribers) {
+        const result = await sendMail(subscriber.email, subject, message);
+        results.push(result);
+        await delay(2000); 
+    }
+
+    return results;
 };
+
 
 
 router.post('/notify', async (req, res) => {
@@ -77,22 +88,22 @@ router.post('/notify', async (req, res) => {
 
     try {
         const results = await getSubscriber(subject, message);
-
         const failedEmails = results.filter(result => !result.success);
 
         if (failedEmails.length > 0) {
-            return res.status(500).json({
+            return res.status(207).json({ // 207: Multi-Status (partial success)
                 message: 'Some emails failed to send',
-                errors: failedEmails
+                failedEmails
             });
         }
 
-        res.status(201).json({ message: 'Message sent successfully to all subscribers' });
+        res.status(200).json({ message: 'Message sent successfully to all subscribers' });
     } catch (error) {
         console.error("Error sending notifications:", error);
         res.status(500).json({ message: 'Error sending notifications', error: error.message });
     }
 });
+
 
 
 module.exports = router
