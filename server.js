@@ -21,7 +21,28 @@ const initializeApp = async () => {
 
 const app = express();
 app.use(express.json());
-app.use(cors())
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://vite-project-omega-seven.vercel.app',
+  'https://exquisite-wears.vercel.app'
+];
+
+// ✅ Configure CORS
+const corsOptions = {
+  origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true); // Allow the request
+      } else {
+          callback(new Error('Not allowed by CORS'));
+      }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+
 app.use(bodyParser.json())
 
 app.get('/', (req, res) => res.send('API is running...'));
