@@ -19,34 +19,20 @@ router.post('/', async (req, res) => {
     
 })
 
-router.post('/notify', async (req, res) => {
-    const { subject, message} = req.body;
+const sendMail = async (to, subject, message) => {
+    const mail = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: process.env.EMAIL,
+            pass: process.env.PASS
+        }
+    });
 
-    if (!subject || !message) {
-        return res.status(404).json({ message: 'All fields are required'})
-    }
-
-    try {
-        await getSubscriber(subject, message)
-        res.status(201).json({ message: 'Message sent successfully' })
-    } catch (error) {
-     res.status(500).json({ message: 'Error sending notifications' })   
-    }
-
-    const sendMail = async (to, subject, message) => {
-        const mail = nodemailer.createTransport({
-            service: 'gmail',
-            auth: [{
-                user: process.env.EMAIL,
-                pass: process.env.PASS
-            }]
-        })
-    
-        const mailOptions = ({
-            from: process.env.EMAIL,
-            to,
-            subject,
-            text: `<!DOCTYPE html>
+    const mailOptions = {
+        from: process.env.EMAIL,
+        to,
+        subject,
+        html: `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -54,7 +40,6 @@ router.post('/notify', async (req, res) => {
     <title></title>
 </head>
 <style>
-
     .subject {
         font-style: italic;
         font-weight: 800;
@@ -72,10 +57,7 @@ router.post('/notify', async (req, res) => {
         flex-direction: column;
         gap: 5px;
         color: white;
-        padding-left: 10px;
-        padding-right: 10px;
-        padding-top: 8px;
-        padding-bottom: 8px;
+        padding: 10px;
         height: fit-content;
     }
 </style>
@@ -84,26 +66,48 @@ router.post('/notify', async (req, res) => {
     <div class="message">${message}</div>
 </body>
 </html>`
-        })
-        
-        try {
-            await mail.sendMail(mailOptions)
-            res.status(200).json({ message : 'Message sent successfully'})
-        } catch (error) {
-            if (error.code === 1100) {
-                res.status(1100).json({ message: 'Email already subscribed'})
-            } else {
-                res.status(500).json({ message: 'Server not responding'})
-            }
-        }
+    };
+
+    try {
+        await mail.sendMail(mailOptions);
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending email:", error);
+        return { success: false, error };
     }
-    
-    const getSubscriber = async (subject, message) => {
-        const subscribers = await Subscribe.find();
-        for (const subscriber of subscribers) {
-            sendMail(subscriber.email, subject, message)
-        }
+};
+
+const getSubscriber = async (subject, message) => {
+    const subscribers = await Subscribe.find();
+    const promises = subscribers.map(subscriber =>
+        sendMail(subscriber.email, subject, message)
+    );
+    return Promise.all(promises);
+};
+
+router.post('/notify', async (req, res) => {
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+        return res.status(400).json({ message: 'All fields are required' });
     }
-})
+
+    try {
+        const results = await getSubscriber(subject, message);
+        const failedEmails = results.filter(result => !result.success);
+
+        if (failedEmails.length > 0) {
+            return res.status(500).json({
+                message: 'Some emails failed to send',
+                failedEmails
+            });
+        }
+
+        res.status(201).json({ message: 'Message sent successfully' });
+    } catch (error) {
+        console.error("Error sending notifications:", error);
+        res.status(500).json({ message: 'Error sending notifications', error: error.message });
+    }
+});
 
 module.exports = router

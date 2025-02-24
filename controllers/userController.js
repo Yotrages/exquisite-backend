@@ -6,6 +6,10 @@ const bcrypt = require("bcryptjs");
 const registerUser = async (req, res) => {
   const { name, email, password, isAdmin = false } = req.body;
 
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'All fields are required'})
+  }
+
   try {
     const userExists = await User.findOne({ email });
 
@@ -42,6 +46,9 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  if (!email || !password) {
+    return res.status(404).json({ message: "All fields are required"})
+  }
   try {
     const user = await User.findOne({ email });
     if (!user) {
@@ -76,6 +83,11 @@ const loginUser = async (req, res) => {
 const changePassword = async (req, res) => {
   const { email, password} = req.body;
 
+  if (!email || !password) {
+    return res.status(404).json({ message: "All fields are required"})
+  }
+  
+  
   try {
     const salt = bcrypt.genSalt(10);
   const newPassword = bcrypt.hash(password, salt);
