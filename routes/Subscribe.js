@@ -70,10 +70,10 @@ const sendMail = async (to, subject, message) => {
 
     try {
         await mail.sendMail(mailOptions);
-        return { success: true };
+        res.status(200).json({ message: 'Message sent successfully' });
     } catch (error) {
         console.error("Error sending email:", error);
-        return { success: false, error };
+        res.status(500).json({ message: 'Server not responding', error });
     }
 };
 
