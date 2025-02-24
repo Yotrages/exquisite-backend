@@ -30,6 +30,7 @@ const sendMail = async (to, subject, message) => {
         }
     });
 
+    // dzwtdtminkriwdzc
     const mailOptions = {
         from: process.env.EMAIL,
         to,
