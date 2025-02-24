@@ -39,8 +39,8 @@ const sendMail = async (to, subject, message) => {
         <html>
         <head>
             <style>
-                .subject { font-style: italic; font-weight: 800; font-size: 17px; }
-                .message { font-weight: 600; background-color: #f2f2f2; color: black; letter-spacing: 1.5px; }
+                .subject { font-style: italic; font-weight: 800; font-size: 17px; margin-bottom: 10px; }
+                .message { border-radius: 20px; background-color: #f2f2f2; color: black; }
                 body { background-color: black; color: white; padding: 10px; }
             </style>
         </head>
