@@ -21,7 +21,9 @@ router.post('/', async (req, res) => {
 
 const sendMail = async (to, subject, message) => {
     const mail = nodemailer.createTransport({
-        service: 'gmail',
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
         auth: {
             user: process.env.EMAIL,
             pass: process.env.PASS
@@ -32,58 +34,39 @@ const sendMail = async (to, subject, message) => {
         from: process.env.EMAIL,
         to,
         subject,
-        html: `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
-</head>
-<style>
-    .subject {
-        font-style: italic;
-        font-weight: 800;
-        font-size: 17px;
-    }
-    .message {
-        font-weight: 600;
-        background-color: #f2f2f2;
-        color: black !important;
-        letter-spacing: 1.5px;
-    }
-    body{
-        background-color: black;
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        color: white;
-        padding: 10px;
-        height: fit-content;
-    }
-</style>
-<body>
-    <div class="subject"><span style="color: green;">Subject:</span> ${subject}</div>
-    <div class="message">${message}</div>
-</body>
-</html>`
+        html: `
+        <html>
+        <head>
+            <style>
+                .subject { font-style: italic; font-weight: 800; font-size: 17px; }
+                .message { font-weight: 600; background-color: #f2f2f2; color: black; letter-spacing: 1.5px; }
+                body { background-color: black; color: white; padding: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="subject"><span style="color: green;">Subject:</span> ${subject}</div>
+            <div class="message">${message}</div>
+        </body>
+        </html>`
     };
 
     try {
         await mail.sendMail(mailOptions);
-        res.status(200).json({ message: 'Message sent successfully' });
+        return { success: true };
     } catch (error) {
         console.error("Error sending email:", error);
-        res.status(500).json({ message: 'Server not responding', error });
+        return { success: false, error };
     }
 };
 
+
 const getSubscriber = async (subject, message) => {
     const subscribers = await Subscribe.find();
-    const promises = subscribers.map(subscriber =>
-        sendMail(subscriber.email, subject, message)
-    );
-    return Promise.all(promises);
+    const emailPromises = subscribers.map((subscriber) => sendMail(subscriber.email, subject, message));
+
+    return await Promise.all(emailPromises);
 };
+
 
 router.post('/notify', async (req, res) => {
     const { subject, message } = req.body;
@@ -94,20 +77,22 @@ router.post('/notify', async (req, res) => {
 
     try {
         const results = await getSubscriber(subject, message);
+
         const failedEmails = results.filter(result => !result.success);
 
         if (failedEmails.length > 0) {
             return res.status(500).json({
                 message: 'Some emails failed to send',
-                failedEmails
+                errors: failedEmails
             });
         }
 
-        res.status(201).json({ message: 'Message sent successfully' });
+        res.status(201).json({ message: 'Message sent successfully to all subscribers' });
     } catch (error) {
         console.error("Error sending notifications:", error);
         res.status(500).json({ message: 'Error sending notifications', error: error.message });
     }
 });
+
 
 module.exports = router
