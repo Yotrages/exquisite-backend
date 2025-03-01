@@ -61,13 +61,14 @@ const sendMail = async (to, subject, message) => {
                     text-align: center;
                     font-size: 18px;
                     font-weight: bold;
+                    line-height: 1.2;
                     border-radius: 8px 8px 0 0;
                 }
                 .subject {
                     font-weight: bold;
                     font-size: 18px;
                     color: #007bff;
-                    margin-top: 10px;
+                    margin-top: 16px;
                 }
                 .message {
                     font-size: 16px;
@@ -76,7 +77,7 @@ const sendMail = async (to, subject, message) => {
                     padding: 15px;
                     border-left: 4px solid #007bff;
                     border-radius: 4px;
-                    margin-top: 10px;
+                    margin-top: 16px;
                 }
                 .footer {
                     margin-top: 20px;
