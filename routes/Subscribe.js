@@ -57,9 +57,9 @@ const sendMail = async (to, subject, message) => {
                 .header {
                     background-color: #007bff;
                     color: white;
-                    padding: 15px;
+                    padding: 5px;
                     text-align: center;
-                    font-size: 22px;
+                    font-size: 18px;
                     font-weight: bold;
                     border-radius: 8px 8px 0 0;
                 }
@@ -88,10 +88,10 @@ const sendMail = async (to, subject, message) => {
         </head>
         <body>
             <div class="container">
-                <div class="header">New Message Notification</div>
-                <div class="subject">📌 <strong>Subject:</strong> ${subject}</div>
+                <div class="header">New product notification from Exquisite Wears</div>
+                <div class="subject">📌 ${subject}</div>
                 <div class="message">${message}</div>
-                <div class="footer">Thank you for subscribing to our website!</div>
+                <div class="footer">Thank you for subscribing to Exquisite Wears!</div>
             </div>
         </body>
         </html>`

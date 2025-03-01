@@ -22,6 +22,7 @@ router.post("/", async (req, res) => {
         const mailOptions = {
             from: email,
             to: process.env.EMAIL,
+            subject: subject,
             html: `
         <html>
         <head>
@@ -44,9 +45,9 @@ router.post("/", async (req, res) => {
                 .header {
                     background-color: #007bff;
                     color: white;
-                    padding: 15px;
+                    padding: 5px;
                     text-align: center;
-                    font-size: 22px;
+                    font-size: 18px;
                     font-weight: bold;
                     border-radius: 8px 8px 0 0;
                 }
@@ -78,7 +79,7 @@ router.post("/", async (req, res) => {
                 <div class="header">New message from user ${name}</div>
                 <div class="subject">📌 <strong>Subject:</strong> ${subject}</div>
                 <div class="message">${message}</div>
-                <div class="footer">The message was sent to you by a user from Exquisite Wears</div>
+                <div class="footer">This message was sent to you by a user from Exquisite Wears</div>
             </div>
         </body>
         </html>`
