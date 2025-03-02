@@ -119,7 +119,7 @@ const getSubscriber = async (subject, message) => {
     for (const subscriber of subscribers) {
         const result = await sendMail(subscriber.email, subject, message);
         results.push(result);
-        await delay(2000); 
+        await delay(500); 
     }
 
     return results;
