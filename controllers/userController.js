@@ -7,7 +7,7 @@ const registerUser = async (req, res) => {
   const { name, email, password, isAdmin = false } = req.body;
 
   if (!name || !email || !password) {
-    return res.status(400).json({ message: 'All fields are required'})
+    return res.status(400).json({ message: 'All fields are required' });
   }
 
   try {
@@ -17,14 +17,16 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    // Hash password BEFORE saving to DB
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const user = await User.create({
       name,
       email,
-      password,
+      password: hashedPassword,  // Store the hashed password
       isAdmin,
     });
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
 
     if (user) {
       res.status(201).json({
@@ -47,64 +49,67 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(404).json({ message: "All fields are required"})
+    return res.status(404).json({ message: "All fields are required" });
   }
+
   try {
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
+
     const matchPassword = await bcrypt.compare(password, user.password);
 
     if (!matchPassword) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const check = user.isAdmin === true && generateToken(user.id, user.isAdmin);
-    if (user && matchPassword) {
-      console.log("Credentials matched");
-      res.status(200).json({
-        _id: user.id,
-        name: user.name,
-        email: user.email,
-        isAdmin: user.isAdmin,
-        token: check,
-      });
-    } else {
-      console.error("Invalid email or password");
-      res.status(401).json({ message: "Invalid email or password" });
+    const response = {
+      _id: user.id,
+      name: user.name,
+      email: user.email,
+      isAdmin: user.isAdmin,
+    };
+
+    // Send token ONLY if the user is an admin
+    if (user.isAdmin) {
+      response.token = generateToken(user.id, user.isAdmin);
     }
+
+    res.status(200).json(response);
   } catch (error) {
-    console.error("Login server error:", error); // Debug log
+    console.error("Login server error:", error);
     res.status(500).json({ message: "Server Error", error });
   }
 };
 
+// Change Password
 const changePassword = async (req, res) => {
-  const { email, password} = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(404).json({ message: "All fields are required"})
+    return res.status(404).json({ message: "All fields are required" });
   }
-  
-  
-  try {
-    const salt = bcrypt.genSalt(10);
-  const newPassword = bcrypt.hash(password, salt);
 
+  try {
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(401).json({ message: "Invalid email account" });
     }
-    
-    const updatedUser = await User.findOneAndUpdate(
+
+    // Hash new password before updating
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    await User.findOneAndUpdate(
       { email: user.email },
-      { password: newPassword },
+      { password: hashedPassword },
       { new: true }
     );
-    return res
-      .status(200)
-      .json({ message: "Password updated successfully", updatedUser });
+
+    return res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server Error", error });
   }
