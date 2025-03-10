@@ -25,7 +25,7 @@ app.use(express.json());
 const allowedOrigins = [
   'http://localhost:5173',
   'https://vite-project-omega-seven.vercel.app',
-  'https://exquisite-wears.vercel.app'
+  'https://exquisitewears.vercel.app'
 ];
 
 // ✅ Configure CORS
