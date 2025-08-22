@@ -17,14 +17,13 @@ const registerUser = async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password BEFORE saving to DB
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = await User.create({
       name,
       email,
-      password: hashedPassword,  // Store the hashed password
+      password: hashedPassword,  
       isAdmin,
     });
 
@@ -71,7 +70,6 @@ const loginUser = async (req, res) => {
       isAdmin: user.isAdmin,
     };
 
-    // Send token ONLY if the user is an admin
     if (user.isAdmin) {
       response.token = generateToken(user.id, user.isAdmin);
     }
@@ -98,7 +96,6 @@ const changePassword = async (req, res) => {
       return res.status(401).json({ message: "Invalid email account" });
     }
 
-    // Hash new password before updating
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 

@@ -9,6 +9,9 @@ const { protect, admin } = require('./middleware/authMiddleware');
 const cors = require('cors');
 const subscribe = require('./routes/Subscribe')
 const bodyParser = require('body-parser')
+const passport = require('passport');
+const session = require('express-session');
+const configurePassport = require('./config/passport');
 
 
 dotenv.config();
@@ -18,6 +21,7 @@ const initializeApp = async () => {
   };
   
   initializeApp();
+  configurePassport()
 
 const app = express();
 app.use(express.json());
@@ -32,7 +36,7 @@ const allowedOrigins = [
 const corsOptions = {
   origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {
-          callback(null, true); // Allow the request
+          callback(null, true);
       } else {
           callback(new Error('Not allowed by CORS'));
       }
@@ -42,9 +46,17 @@ const corsOptions = {
   credentials: true
 };
 
+
 app.use(cors(corsOptions));
 
 app.use(bodyParser.json())
+app.use(session({ secret: 'secret', resave: false, saveUninitialized: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
+
 
 app.get('/', (req, res) => res.send('API is running...'));
 

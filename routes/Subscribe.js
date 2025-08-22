@@ -108,8 +108,6 @@ const sendMail = async (to, subject, message) => {
     }
 };
 
-
-
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const getSubscriber = async (subject, message) => {
@@ -124,8 +122,6 @@ const getSubscriber = async (subject, message) => {
 
     return results;
 };
-
-
 
 router.post('/notify', async (req, res) => {
     const { subject, message } = req.body;
