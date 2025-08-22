@@ -2,7 +2,7 @@ const express = require('express');
 const { registerUser, loginUser, changePassword } = require('../controllers/userController');
 const router = express.Router();
 const passport = require('passport');
-const { handleOAuthCallback } = require('../controllers/authController');
+const handleOAuthCallback = require('../controllers/authController');
 
 
 router.post('/register', registerUser);

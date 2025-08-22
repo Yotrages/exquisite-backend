@@ -120,23 +120,23 @@ const handleOAuthCallback = async (req, res) => {
 };
 
 // Helper function to generate state parameter for OAuth URLs
-export const generateOAuthState = (intent, redirectUrl) => {
-  const state = {
-    intent,
-    redirectUrl: redirectUrl || "oauth-success",
-    timestamp: Date.now()
-  };
-  return Buffer.from(JSON.stringify(state)).toString("base64");
-};
+// const generateOAuthState = (intent, redirectUrl) => {
+//   const state = {
+//     intent,
+//     redirectUrl: redirectUrl || "oauth-success",
+//     timestamp: Date.now()
+//   };
+//   return Buffer.from(JSON.stringify(state)).toString("base64");
+// };
 
-// Example usage in your OAuth routes
-export const initiateGoogleOAuth = (intent) => {
-  return (req, res, next) => {
-    const state = generateOAuthState(intent, req.query.redirect);
-    // Add state to your passport authenticate call
-    req.query.state = state;
-    next();
-  };
-};
+// // Example usage in your OAuth routes
+// const initiateGoogleOAuth = (intent) => {
+//   return (req, res, next) => {
+//     const state = generateOAuthState(intent, req.query.redirect);
+//     // Add state to your passport authenticate call
+//     req.query.state = state;
+//     next();
+//   };
+// };
 
 module.exports = handleOAuthCallback
