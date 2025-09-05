@@ -6,7 +6,7 @@ const configurePassport = () => {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_ID,
     clientSecret: process.env.GOOGLE_SECRET,
-    callbackURL: "/api/users/auth/google/callback",
+    callbackURL: "https://ecommerce-9wqc.onrender.com/api/users/auth/google/callback",
     passReqToCallback: true
   }, (req, accessToken, refreshToken, profile, done) => {
     req.user = {
@@ -23,7 +23,7 @@ const configurePassport = () => {
   passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_ID,
     clientSecret: process.env.GITHUB_SECRET,
-    callbackURL: "/api/users/auth/github/callback",
+    callbackURL: "https://ecommerce-9wqc.onrender.com/api/users/auth/github/callback",
     passReqToCallback: true
   }, (req, accessToken, refreshToken, profile, done) => {
     req.user = {
