@@ -61,7 +61,7 @@ const handleOAuthCallback = async (req, res) => {
         email: profile.email,
         providerId: profile.id,
         provider: provider,
-        // Add any other fields you need for new users
+        isAdmin: false
       });
 
       const token = generateToken(existingUser._id, existingUser.isAdmin);
@@ -70,7 +70,7 @@ const handleOAuthCallback = async (req, res) => {
       return res.redirect(
         `${redirectBase}/${successRedirect}?token=${token}&type=register&id=${newUser._id}&name=${encodeURIComponent(
           newUser.name || ""
-        )}&email=${encodeURIComponent(newUser.email)}&new=true`
+        )}&isAdmin=${encodeURIComponent(newUser.isAdmin)}&new=true`
       );
 
     } else {
@@ -94,15 +94,12 @@ const handleOAuthCallback = async (req, res) => {
       }
 
       // Successful login
-      const token = generateToken({
-        userId: existingUser._id,
-        email: existingUser.email,
-      });
+      const token = generateToken(existingUser._id, existingUser.isAdmin);
 
       return res.redirect(
         `${redirectBase}/${successRedirect}?token=${token}&type=login&id=${existingUser._id}&name=${encodeURIComponent(
           existingUser.name || ""
-        )}&email=${encodeURIComponent(existingUser.email)}`
+        )}&isAdmin=${encodeURIComponent(existingUser.isAdmin)}`
       );
     }
 
