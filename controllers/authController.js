@@ -4,7 +4,7 @@ const generateToken = require("../utils/generateToken");
 const handleOAuthCallback = async (req, res) => {
   if (!req.user) {
     return res.redirect(
-      `${process.env.FRONTEND_URL || "http://localhost:3000"}/login?error=${encodeURIComponent("Authentication failed")}`
+      `${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=${encodeURIComponent("Authentication failed")}`
     );
   }
 
