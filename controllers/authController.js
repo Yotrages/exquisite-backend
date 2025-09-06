@@ -20,6 +20,7 @@ const handleOAuthCallback = async (req, res) => {
       intent = decoded.intent || "login";
       successRedirect = decoded.redirectUrl || "oauth-success";
       
+      console.log(decoded)
       // Check if state is expired (20 minutes)
       const timestamp = decoded.timestamp;
       if (timestamp && Date.now() - timestamp > 20 * 60 * 1000) {
