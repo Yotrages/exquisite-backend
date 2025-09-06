@@ -39,14 +39,20 @@ const handleOAuthCallback = async (req, res) => {
     if (intent === "register") {
       // REGISTRATION FLOW
       if (existingUser) {
-        // User already exists, redirect to login page with suggestion to login instead
-        const errorMessage = existingUser.provider === provider 
-          ? "Account already exists with this email. Please sign in instead."
-          : `Email already registered with ${existingUser.provider || "another method"}. Try logging in instead.`;
-        
-        return res.redirect(
-          `${redirectBase}/login?error=${encodeURIComponent(errorMessage)}&suggest=login`
-        );
+        // User already exists, can't register again
+        if (existingUser.provider !== provider) {
+          return res.redirect(
+            `${redirectBase}/register?error=${encodeURIComponent(
+              `Email already registered with ${existingUser.provider || "another method"}. Try logging in instead.`
+            )}&suggest=login`
+          );
+        } else {
+          return res.redirect(
+            `${redirectBase}/register?error=${encodeURIComponent(
+              "Account already exists with this email. Please sign in instead."
+            )}&suggest=login`
+          );
+        }
       }
 
       // Create new user (registration)
@@ -58,17 +64,21 @@ const handleOAuthCallback = async (req, res) => {
         isAdmin: false
       });
 
-      // After successful registration, redirect to login page with success message
+      const token = generateToken(existingUser._id, existingUser.isAdmin);
+
+      // Redirect to success page after successful registration
       return res.redirect(
-        `${redirectBase}/login?success=${encodeURIComponent("Account created successfully! Please log in.")}&registered=true`
+        `${redirectBase}/${successRedirect}?token=${token}&type=register&id=${newUser._id}&name=${encodeURIComponent(
+          newUser.name || ""
+        )}&isAdmin=${encodeURIComponent(newUser.isAdmin)}&new=true`
       );
 
     } else {
       // LOGIN FLOW
       if (!existingUser) {
-        // User doesn't exist, redirect to register page with suggestion to register
+        // User doesn't exist, can't login
         return res.redirect(
-          `${redirectBase}/register?error=${encodeURIComponent(
+          `${redirectBase}/login?error=${encodeURIComponent(
             "No account found with this email. Please register first."
           )}&suggest=register`
         );
@@ -83,7 +93,7 @@ const handleOAuthCallback = async (req, res) => {
         );
       }
 
-      // Successful login - redirect to oauth-success page with user data
+      // Successful login
       const token = generateToken(existingUser._id, existingUser.isAdmin);
 
       return res.redirect(
@@ -106,4 +116,24 @@ const handleOAuthCallback = async (req, res) => {
   }
 };
 
-module.exports = handleOAuthCallback;
+// Helper function to generate state parameter for OAuth URLs
+// const generateOAuthState = (intent, redirectUrl) => {
+//   const state = {
+//     intent,
+//     redirectUrl: redirectUrl || "oauth-success",
+//     timestamp: Date.now()
+//   };
+//   return Buffer.from(JSON.stringify(state)).toString("base64");
+// };
+
+// // Example usage in your OAuth routes
+// const initiateGoogleOAuth = (intent) => {
+//   return (req, res, next) => {
+//     const state = generateOAuthState(intent, req.query.redirect);
+//     // Add state to your passport authenticate call
+//     req.query.state = state;
+//     next();
+//   };
+// };
+
+module.exports = handleOAuthCallback
