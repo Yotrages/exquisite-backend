@@ -10,11 +10,25 @@ router.post('/login', loginUser);
 router.put('/forgot', changePassword)
 
 // Google OAuth
-router.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/auth/google', (req, res, next) => {
+  const state = req.query.state;
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'],
+    state: state // Pass the state parameter to Google
+  })(req, res, next);
+});
+
 router.get('/auth/google/callback', passport.authenticate('google', { session: false }), handleOAuthCallback);
 
-// GitHub OAuth
-router.get('/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+// GitHub OAuth  
+router.get('/auth/github', (req, res, next) => {
+  const state = req.query.state;
+  passport.authenticate('github', { 
+    scope: ['user:email'],
+    state: state // Pass the state parameter to GitHub
+  })(req, res, next);
+});
+
 router.get('/auth/github/callback', passport.authenticate('github', { session: false }), handleOAuthCallback);
 
 
