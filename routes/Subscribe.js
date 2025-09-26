@@ -30,7 +30,6 @@ const sendMail = async (to, subject, message) => {
         }
     });
 
-    // dzwtdtminkriwdzc
     const mailOptions = {
         from: process.env.EMAIL,
         to,
@@ -135,7 +134,7 @@ router.post('/notify', async (req, res) => {
         const failedEmails = results.filter(result => !result.success);
 
         if (failedEmails.length > 0) {
-            return res.status(207).json({ // 207: Multi-Status (partial success)
+            return res.status(207).json({ 
                 message: 'Some emails failed to send',
                 failedEmails
             });

@@ -5,7 +5,6 @@ const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Add to Cart
 router.post('/add', protect, async (req, res) => {
   const { productId, quantity } = req.body;
 
@@ -20,18 +19,14 @@ router.post('/add', protect, async (req, res) => {
     let cart = await Cart.findOne({ user: req.user._id });
 
     if (cart) {
-      // Check if product is already in the cart
       const itemIndex = cart.items.findIndex(item => item.product.toString() === productId);
 
       if (itemIndex > -1) {
-        // Update quantity
         cart.items[itemIndex].quantity += quantity;
       } else {
-        // Add new item
         cart.items.push({ product: productId, quantity });
       }
     } else {
-      // Create new cart
       cart = new Cart({
         user: req.user._id,
         items: [{ product: productId, quantity }],
@@ -45,7 +40,6 @@ router.post('/add', protect, async (req, res) => {
   }
 });
 
-// Get Cart
 router.get('/', protect, async (req, res) => {
   try {
     const cart = await Cart.findOne({ user: req.user._id }).populate('items.product');
@@ -57,7 +51,6 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
-// Update Cart Item
 router.put('/update', protect, async (req, res) => {
   const { productId, quantity } = req.body;
 
@@ -69,10 +62,8 @@ router.put('/update', protect, async (req, res) => {
     if (itemIndex === -1) return res.status(404).json({ error: 'Item not found in cart' });
 
     if (quantity === 0) {
-      // Remove item if quantity is 0
       cart.items.splice(itemIndex, 1);
     } else {
-      // Update quantity
       cart.items[itemIndex].quantity = quantity;
     }
 

@@ -2,7 +2,6 @@ const User = require("../Models/User");
 const generateToken = require("../utils/generateToken");
 const bcrypt = require("bcryptjs");
 
-// Register User
 const registerUser = async (req, res) => {
   const { name, email, password, isAdmin = false } = req.body;
 
@@ -42,7 +41,6 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Login User
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -82,7 +80,6 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Change Password
 const changePassword = async (req, res) => {
   const { email, password } = req.body;
 

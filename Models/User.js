@@ -6,9 +6,8 @@ const userSchema = new mongoose.Schema({
     password: { type: String },
     isAdmin: { type: Boolean, default: false },
 
-    // For OAuth users
-  provider: { type: String }, // 'google' or 'github'
-  providerId: { type: String }, // The unique ID from Google or GitHub
+  provider: { type: String }, 
+  providerId: { type: String }, 
 });
 
 const User = mongoose.model('User', userSchema);

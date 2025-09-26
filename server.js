@@ -32,7 +32,6 @@ const allowedOrigins = [
   'https://exquisitewears.vercel.app'
 ];
 
-// ✅ Configure CORS
 const corsOptions = {
   origin: (origin, callback) => {
       if (!origin || allowedOrigins.includes(origin)) {

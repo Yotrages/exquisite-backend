@@ -11,16 +11,14 @@ const cloudinary = require("../config/cloudinary");
 
 const router = express.Router();
 
-// Configure multer to store files temporarily in memory
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limit
+    fileSize: 100 * 1024 * 1024 
   }
 });
 
-// Image compression middleware using Sharp (similar to Squoosh quality)
 const compressImage = async (buffer, originalname, mimetype) => {
   const ext = path.extname(originalname).toLowerCase();
   
@@ -32,9 +30,9 @@ const compressImage = async (buffer, originalname, mimetype) => {
       case '.jpeg':
         compressedBuffer = await sharp(buffer)
           .jpeg({ 
-            quality: 85, // High quality, reduces size significantly
+            quality: 85, 
             progressive: true,
-            mozjpeg: true // Better compression algorithm
+            mozjpeg: true 
           })
           .toBuffer();
         break;
@@ -43,7 +41,7 @@ const compressImage = async (buffer, originalname, mimetype) => {
         compressedBuffer = await sharp(buffer)
           .png({ 
             quality: 90,
-            compressionLevel: 9, // Maximum compression
+            compressionLevel: 9, 
             progressive: true
           })
           .toBuffer();
@@ -53,13 +51,12 @@ const compressImage = async (buffer, originalname, mimetype) => {
         compressedBuffer = await sharp(buffer)
           .webp({ 
             quality: 85,
-            effort: 6 // Maximum effort for better compression
+            effort: 6 
           })
           .toBuffer();
         break;
         
       case '.gif':
-        // For GIFs, we'll convert to WebP for better compression
         compressedBuffer = await sharp(buffer, { animated: true })
           .webp({ 
             quality: 85,
@@ -69,11 +66,9 @@ const compressImage = async (buffer, originalname, mimetype) => {
         break;
         
       case '.svg':
-        // SVGs are already optimized, return as-is
         return buffer;
         
       default:
-        // For other formats, try to convert to WebP
         compressedBuffer = await sharp(buffer)
           .webp({ 
             quality: 85,
@@ -82,7 +77,6 @@ const compressImage = async (buffer, originalname, mimetype) => {
           .toBuffer();
     }
     
-    // Check if compression actually reduced the size
     if (compressedBuffer.length < buffer.length) {
       console.log(`Image compressed: ${buffer.length} → ${compressedBuffer.length} bytes (${Math.round((1 - compressedBuffer.length/buffer.length) * 100)}% reduction)`);
       return compressedBuffer;
@@ -93,41 +87,35 @@ const compressImage = async (buffer, originalname, mimetype) => {
     
   } catch (error) {
     console.error("Image compression failed:", error);
-    return buffer; // Return original if compression fails
+    return buffer; 
   }
 };
 
-// Video compression middleware using FFmpeg
 const compressVideo = async (buffer, originalname) => {
   const tempDir = path.join(__dirname, '../temp');
   const inputPath = path.join(tempDir, `input_${Date.now()}_${originalname}`);
   const outputPath = path.join(tempDir, `output_${Date.now()}_${originalname.replace(path.extname(originalname), '.mp4')}`);
   
   try {
-    // Create temp directory if it doesn't exist
     await fs.mkdir(tempDir, { recursive: true });
     
-    // Write buffer to temp file
     await fs.writeFile(inputPath, buffer);
     
-    // Compress video using FFmpeg
     await new Promise((resolve, reject) => {
       ffmpeg(inputPath)
         .videoCodec('libx264')
         .audioCodec('aac')
-        .videoBitrate('1000k') // Adjust based on your needs
+        .videoBitrate('1000k') 
         .audioBitrate('128k')
-        .size('?x720') // Max height 720p, maintain aspect ratio
+        .size('?x720') 
         .format('mp4')
         .on('end', resolve)
         .on('error', reject)
         .save(outputPath);
     });
     
-    // Read compressed file
     const compressedBuffer = await fs.readFile(outputPath);
     
-    // Clean up temp files
     await fs.unlink(inputPath);
     await fs.unlink(outputPath);
     
@@ -136,18 +124,15 @@ const compressVideo = async (buffer, originalname) => {
     
   } catch (error) {
     console.error("Video compression failed:", error);
-    // Clean up temp files on error
     try {
       await fs.unlink(inputPath);
       await fs.unlink(outputPath);
     } catch (cleanupError) {
-      // Ignore cleanup errors
     }
-    return buffer; // Return original if compression fails
+    return buffer; 
   }
 };
 
-// Main compression middleware
 const compressFile = async (req, res, next) => {
   if (!req.file) return next();
   
@@ -164,29 +149,26 @@ const compressFile = async (req, res, next) => {
     } else if (isVideo) {
       compressedBuffer = await compressVideo(buffer, originalname);
     } else {
-      // For other file types, proceed without compression
       compressedBuffer = buffer;
     }
     
-    // Update the file object with compressed data
     req.file.buffer = compressedBuffer;
     req.file.size = compressedBuffer.length;
     
     next();
   } catch (error) {
     console.error("File compression middleware error:", error);
-    next(); // Continue with original file if compression fails
+    next(); 
   }
 };
 
-// Custom Cloudinary upload function for compressed files
 const uploadToCloudinary = (buffer, originalname) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: 'product-images',
-        resource_type: 'auto', // Auto-detect file type
-        quality: 'auto:best', // Let Cloudinary optimize further if needed
+        resource_type: 'auto', 
+        quality: 'auto:best', 
       },
       (error, result) => {
         if (error) reject(error);
@@ -222,7 +204,6 @@ const verifyAdmin = (req, res, next) => {
   }
 };
 
-// Updated POST route with compression
 router.post("/post", verifyAdmin, upload.single("image"), compressFile, async (req, res) => {
   const { name, description, price, quantity } = req.body;
 
@@ -231,7 +212,6 @@ router.post("/post", verifyAdmin, upload.single("image"), compressFile, async (r
       return res.status(400).json({ message: "Image upload failed" });
     }
 
-    // Upload compressed file to Cloudinary
     const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
     
     console.log("Upload successful:", uploadResult.secure_url);
@@ -262,7 +242,6 @@ router.post("/post", verifyAdmin, upload.single("image"), compressFile, async (r
   }
 });
 
-// Updated PUT route with compression
 router.put("/put/:id", verifyAdmin, upload.single("image"), compressFile, async (req, res) => {
   try {
     const { id } = req.params;
@@ -299,7 +278,6 @@ router.put("/put/:id", verifyAdmin, upload.single("image"), compressFile, async 
   }
 });
 
-// Rest of your existing routes remain the same
 router.get("/get", async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 15;

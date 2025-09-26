@@ -14,7 +14,7 @@ router.get('/auth/google', (req, res, next) => {
   const state = req.query.state;
   passport.authenticate('google', { 
     scope: ['profile', 'email'],
-    state: state // Pass the state parameter to Google
+    state: state 
   })(req, res, next);
 });
 
@@ -25,7 +25,7 @@ router.get('/auth/github', (req, res, next) => {
   const state = req.query.state;
   passport.authenticate('github', { 
     scope: ['user:email'],
-    state: state // Pass the state parameter to GitHub
+    state: state 
   })(req, res, next);
 });
 

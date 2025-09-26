@@ -10,7 +10,7 @@ const paymentSchema = new mongoose.Schema({
     },
   ],
   totalAmount: { type: Number, required: true },
-  paymentMethod: { type: String, required: true }, // "PayPal", "Paystack", or "Manual"
+  paymentMethod: { type: String, required: true }, 
   isPaid: { type: Boolean, default: false },
   paidAt: { type: Date },
   paymentResult: {
