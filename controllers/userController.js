@@ -27,11 +27,15 @@ const registerUser = async (req, res) => {
     });
 
     if (user) {
+      // Generate token for newly registered user
+      const token = generateToken(user.id, user.isAdmin);
+      
       res.status(201).json({
         _id: user.id,
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
+        token: token,
       });
     } else {
       res.status(400).json({ message: "Invalid user data" });
@@ -62,16 +66,16 @@ const loginUser = async (req, res) => {
      }
     }
 
+    // Generate token for ALL users (not just admins)
+    const token = generateToken(user.id, user.isAdmin);
+
     const response = {
       _id: user.id,
       name: user.name,
       email: user.email,
       isAdmin: user.isAdmin,
+      token: token,
     };
-
-    if (user.isAdmin) {
-      response.token = generateToken(user.id, user.isAdmin);
-    }
 
     res.status(200).json(response);
   } catch (error) {
