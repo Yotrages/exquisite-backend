@@ -55,7 +55,10 @@ const reviewSchema = new mongoose.Schema(
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending',
     },
-    moderatorNote: String,
+    moderatorNote: {
+      type: String,
+      required: false
+    },
     createdAt: {
       type: Date,
       default: Date.now,
