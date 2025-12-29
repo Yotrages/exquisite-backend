@@ -35,11 +35,11 @@ const globalLimiter = rateLimit({
 
 /**
  * STRICT - Authentication endpoints
- * 5 attempts per 15 minutes per IP (login, register, password reset)
+ * 10 attempts per 10 minutes per IP (login, register, password reset)
  */
 const strictLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 10,
   message: 'Too many authentication attempts, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -51,11 +51,11 @@ const strictLimiter = rateLimit({
 
 /**
  * MODERATE - Write operations (POST, PUT)
- * 100 requests per 15 minutes per IP
+ * 100 requests per 10 minutes per IP
  * For creating/updating resources
  */
 const moderateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 10 * 60 * 1000, // 15 minutes
   max: 100,
   message: 'Too many write requests, please slow down.',
   standardHeaders: true,

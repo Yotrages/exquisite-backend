@@ -1,32 +1,29 @@
 const redis = require('redis');
 
-// Create Redis client
 const client = redis.createClient({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  retryStrategy: (options) => {
-    if (options.error && options.error.code === 'ECONNREFUSED') {
-      console.error('Redis connection refused. Using in-memory cache fallback.');
-      return new Error('Redis connection refused');
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  socket: {
+    reconnectStrategy: (retries) => {
+      if (retries > 10) {
+        console.error('Redis: Max retries reached. Stopping reconnection.');
+        return new Error('Redis connection lost');
+      }
+      return Math.min(retries * 100, 3000); // Backoff: 100ms, 200ms... up to 3s
     }
-    if (options.total_retry_time > 1000 * 60 * 60) {
-      return new Error('Retry time exhausted');
-    }
-    if (options.attempt > 10) {
-      return undefined;
-    }
-    return Math.min(options.attempt * 100, 3000);
-  },
+  }
 });
 
-client.on('error', (err) => {
-  console.error('Redis Client Error', err);
-});
-
-client.on('connect', () => {
-  console.log('Redis Client Connected');
-});
+// 3. Mandatory: Explicitly call connect() in v4/v5
+(async () => {
+  client.on('error', (err) => console.error('Redis Client Error:', err));
+  client.on('connect', () => console.log('Redis Client Connected'));
+  
+  try {
+    await client.connect();
+  } catch (err) {
+    console.error('Initial Redis connection failed:', err);
+  }
+})();
 
 // In-memory fallback cache for when Redis is unavailable
 const memoryCache = new Map();

@@ -105,7 +105,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/payments', paymentLimiter, paymentRoutes);
 
 // Order routes - apply moderate limiter for writes
-app.use('/api/orders', orderRoutes);
+app.use('/api/orders', moderateLimiter, orderRoutes);
 
 // Admin routes - apply admin-specific limiter
 app.use('/api/admin', adminLimiter, adminRoutes);

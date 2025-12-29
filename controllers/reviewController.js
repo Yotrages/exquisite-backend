@@ -8,8 +8,7 @@ const { getFromCache, setInCache, deleteFromCache } = require('../config/redis')
  */
 const addReview = async (req, res) => {
   try {
-    const { productId } = req.params;
-    const { rating, title, comment, images } = req.body;
+    const { rating, title, comment, images, product: productId } = req.body;
     const userId = req.user._id;
 
     // Validate input
