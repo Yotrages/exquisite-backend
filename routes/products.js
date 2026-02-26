@@ -368,8 +368,14 @@ router.get("/search", async (req, res) => {
   const { query } = req.query;
   try {
     const products = await Product.find({
-      name: { $regex: query, $options: "i" },
-    });
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { category: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { tags: { $in: [new RegExp(query, "i")] } },
+        { brand: { $regex: query, $options: "i" } }
+      ]
+    }).select('name price image images category description brand discount quantity rating reviews');
 
     if (products.length === 0) {
       return res.status(404).json({ message: "No products found!" });
@@ -451,10 +457,10 @@ router.get('/deal-of-the-day', async (req, res) => {
     // You can implement logic to rotate daily or pick the best discount
     const dealOfDay = await Product.findOne({
       discount: { $gte: 40 },
-      stock: { $gt: 0 }
+      quantity: { $gt: 0 }
     })
       .sort({ discount: -1 })
-      .select('name price image discount stock averageRating description')
+      .select('name price originalPrice image images discount quantity rating reviewsCount description brand')
 
     if (!dealOfDay) {
       return res.status(404).json({ message: 'No deal available today' })
@@ -487,11 +493,11 @@ router.get('/:id/related', async (req, res) => {
     const relatedProducts = await Product.find({
       category: product.category,
       _id: { $ne: product._id },
-      stock: { $gt: 0 }
+      quantity: { $gt: 0 }
     })
       .limit(12)
-      .select('name price image discount averageRating')
-      .sort({ averageRating: -1 })
+      .select('name price image images discount rating reviewsCount brand')
+      .sort({ rating: -1 })
 
     res.json(relatedProducts)
   } catch (error) {
@@ -518,11 +524,11 @@ router.get('/:id/frequently-bought-together', async (req, res) => {
     const frequentlyBought = await Product.find({
       category: product.category,
       _id: { $ne: product._id },
-      averageRating: { $gte: 4 },
-      stock: { $gt: 0 }
+      rating: { $gte: 3 },
+      quantity: { $gt: 0 }
     })
       .limit(4)
-      .select('name price image discount averageRating')
+      .select('name price image images discount rating reviewsCount')
 
     res.json(frequentlyBought)
   } catch (error) {
@@ -550,10 +556,10 @@ router.post('/:id/view', async (req, res) => {
  */
 router.get('/trending', async (req, res) => {
   try {
-    const trendingProducts = await Product.find({ stock: { $gt: 0 } })
-      .sort({ views: -1, soldCount: -1 })
+    const trendingProducts = await Product.find({ quantity: { $gt: 0 } })
+      .sort({ views: -1, soldCount: -1, rating: -1 })
       .limit(12)
-      .select('name price image discount averageRating')
+      .select('name price image images discount rating reviewsCount brand')
 
     res.json(trendingProducts)
   } catch (error) {

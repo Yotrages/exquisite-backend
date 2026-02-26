@@ -2,13 +2,14 @@ const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const User = require("../Models/User");
 const { sendOrderConfirmationEmail, sendOrderShippedEmail } = require("../utils/emailService");
+const { createNotification } = require('./notificationController');
 
 /**
- * Calculate estimated delivery date (5-7 business days from now)
+ * Calculate estimated delivery date (5 business days from now)
  */
 const getEstimatedDelivery = () => {
   const date = new Date();
-  date.setDate(date.getDate() + 5); // Add 5 business days
+  date.setDate(date.getDate() + 5);
   return date;
 };
 
@@ -48,8 +49,20 @@ const createOrder = async (req, res) => {
     await order.populate("items.product");
 
     res.status(201).json(order);
-    
-    // Send confirmation email in background (non-blocking)
+
+    // Background tasks — non-blocking
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+
+    // In-app notification
+    createNotification(userId, {
+      type: 'order',
+      title: '🎉 Order Placed Successfully',
+      message: `Your order #${shortId} for ₦${totalPrice.toLocaleString()} has been placed. We'll notify you when it's being processed.`,
+      link: `/orders`,
+      meta: { orderId: order._id },
+    }).catch(() => {});
+
+    // Email confirmation
     try {
       await sendOrderConfirmationEmail(req.user.email, {
         orderNumber: order._id,
@@ -58,9 +71,9 @@ const createOrder = async (req, res) => {
         estimatedDelivery: getEstimatedDelivery(),
       });
     } catch (emailError) {
-      console.error("Email notification failed:", emailError);
-      // Don't fail order creation if email fails
+      console.error("Email notification failed:", emailError.message);
     }
+
   } catch (error) {
     res.status(500).json({
       error: "Failed to create order",
@@ -82,22 +95,16 @@ const getOrderById = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Authorization check
     if (
       order.user._id.toString() !== req.user._id.toString() &&
       !req.user.isAdmin
     ) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to view this order" });
+      return res.status(403).json({ error: "Not authorized to view this order" });
     }
 
     res.status(200).json(order);
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to retrieve order",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to retrieve order", details: error.message });
   }
 };
 
@@ -106,8 +113,8 @@ const getOrderById = async (req, res) => {
  */
 const getUserOrders = async (req, res) => {
   try {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const orders = await Order.find({ user: req.user._id })
@@ -120,18 +127,10 @@ const getUserOrders = async (req, res) => {
 
     res.status(200).json({
       orders,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to retrieve orders",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to retrieve orders", details: error.message });
   }
 };
 
@@ -144,33 +143,23 @@ const getAllOrders = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const query = {};
-    if (status) {
-      query.status = status;
-    }
+    if (status) query.status = status;
 
     const orders = await Order.find(query)
       .populate("user", "name email phone")
       .populate("items.product", "name price")
       .skip(skip)
-      .limit(limit)
+      .limit(parseInt(limit))
       .sort({ createdAt: -1 });
 
     const total = await Order.countDocuments(query);
 
     res.status(200).json({
       orders,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     });
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to retrieve orders",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to retrieve orders", details: error.message });
   }
 };
 
@@ -182,53 +171,74 @@ const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status, trackingNumber, notes } = req.body;
 
-    const validStatuses = [
-      "pending",
-      "processing",
-      "shipped",
-      "delivered",
-      "cancelled",
-    ];
+    const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid order status" });
     }
 
-    const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    const order = await Order.findById(id).populate("user", "name email");
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
+    const prevStatus = order.status;
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (notes) order.notes = notes;
 
-    if (status === "shipped") {
-      await sendOrderShippedEmail(order.user.email, order._id, trackingNumber, "DHL");
-    }
-
     if (status === "delivered") {
       order.isDelivered = true;
       order.deliveredAt = new Date();
-      // Schedule review request email
-      try {
-        // Could implement review request email here
-      } catch (err) {
-        console.error("Review request failed:", err);
-      }
     }
 
     await order.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Order updated successfully",
-      order,
-    });
+    res.status(200).json({ success: true, message: "Order updated successfully", order });
+
+    // ── Background notifications ───────────────────────────────────────────────
+    if (prevStatus === status) return; // no change, skip
+
+    const userId = order.user._id || order.user;
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+
+    const notifMap = {
+      processing: {
+        title: '⚙️ Order Being Processed',
+        message: `Your order #${shortId} is now being processed. Hang tight!`,
+      },
+      shipped: {
+        title: '🚚 Order Shipped',
+        message: `Your order #${shortId} is on its way!${trackingNumber ? ` Tracking: ${trackingNumber}` : ''} Estimated delivery in 2-3 days.`,
+      },
+      delivered: {
+        title: '✅ Order Delivered',
+        message: `Your order #${shortId} has been delivered. Enjoy your purchase! Please leave a review.`,
+      },
+      cancelled: {
+        title: '❌ Order Cancelled',
+        message: `Your order #${shortId} has been cancelled.${notes ? ` Reason: ${notes}` : ''} Contact support if you have questions.`,
+      },
+    };
+
+    if (notifMap[status]) {
+      createNotification(userId, {
+        type: status === 'cancelled' ? 'system' : 'order',
+        title: notifMap[status].title,
+        message: notifMap[status].message,
+        link: `/orders`,
+        meta: { orderId: order._id, trackingNumber },
+      }).catch(() => {});
+    }
+
+    // Send shipped email
+    if (status === 'shipped' && order.user?.email) {
+      try {
+        await sendOrderShippedEmail(order.user.email, order._id, trackingNumber, "DHL");
+      } catch (err) {
+        console.error("Shipped email failed:", err.message);
+      }
+    }
+
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to update order",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to update order", details: error.message });
   }
 };
 
@@ -241,24 +251,17 @@ const cancelOrder = async (req, res) => {
     const { reason } = req.body;
 
     const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    // Authorization check
     if (
       order.user.toString() !== req.user._id.toString() &&
       !req.user.isAdmin
     ) {
-      return res
-        .status(403)
-        .json({ error: "Not authorized to cancel this order" });
+      return res.status(403).json({ error: "Not authorized to cancel this order" });
     }
 
     if (order.status === "delivered" || order.status === "shipped") {
-      return res
-        .status(400)
-        .json({ error: "Cannot cancel delivered or shipped orders" });
+      return res.status(400).json({ error: "Cannot cancel delivered or shipped orders" });
     }
 
     // Restore inventory
@@ -271,19 +274,23 @@ const cancelOrder = async (req, res) => {
     }
 
     order.status = "cancelled";
-    order.notes = reason || "Order cancelled";
+    order.notes = reason || "Order cancelled by user";
     await order.save();
 
-    res.status(200).json({
-      success: true,
-      message: "Order cancelled successfully",
-      order,
-    });
+    res.status(200).json({ success: true, message: "Order cancelled successfully", order });
+
+    // Notify user
+    const shortId = order._id.toString().slice(-8).toUpperCase();
+    createNotification(order.user, {
+      type: 'system',
+      title: '❌ Order Cancelled',
+      message: `Your order #${shortId} has been cancelled.${reason ? ` Reason: ${reason}` : ''} Any payment will be refunded within 3-5 business days.`,
+      link: `/orders`,
+      meta: { orderId: order._id },
+    }).catch(() => {});
+
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to cancel order",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to cancel order", details: error.message });
   }
 };
 
@@ -311,10 +318,7 @@ const getOrderAnalytics = async (req, res) => {
       { $match: { isPaid: true } },
       {
         $group: {
-          _id: {
-            year: { $year: "$createdAt" },
-            month: { $month: "$createdAt" },
-          },
+          _id: { year: { $year: "$createdAt" }, month: { $month: "$createdAt" } },
           total: { $sum: "$totalPrice" },
           count: { $sum: 1 },
         },
@@ -330,10 +334,7 @@ const getOrderAnalytics = async (req, res) => {
       monthlyRevenue,
     });
   } catch (error) {
-    res.status(500).json({
-      error: "Failed to retrieve analytics",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to retrieve analytics", details: error.message });
   }
 };
 

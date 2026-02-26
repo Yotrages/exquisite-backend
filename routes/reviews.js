@@ -7,6 +7,7 @@ const {
   markHelpful,
   markUnhelpful,
   getUserReviews,
+  getMyReviews,
   moderateReview,
 } = require('../controllers/reviewController');
 const { protect, admin } = require('../middleware/authMiddleware');
@@ -14,37 +15,19 @@ const { moderateLimiter } = require('../middleware/rateLimiters');
 
 const router = express.Router();
 
-/**
- * Public routes (read-only)
- */
-// GET /api/reviews/product/:productId - Get all reviews for a product
+// Public
 router.get('/product/:productId', getProductReviews);
 
-/**
- * Protected routes (authenticated users)
- */
-// POST /api/reviews - Add new review (rate-limited)
+// Protected (authenticated users)
+router.get('/mine', protect, getMyReviews);                          // current user's reviews
 router.post('/', protect, moderateLimiter, addReview);
+router.put('/:reviewId', protect, moderateLimiter, updateReview);
+router.delete('/:reviewId', protect, deleteReview);
+router.post('/:reviewId/helpful', protect, markHelpful);
+router.post('/:reviewId/unhelpful', protect, markUnhelpful);
 
-// PUT /api/reviews/:id - Update review (only review author or admin)
-router.put('/:id', protect, moderateLimiter, updateReview);
-
-// DELETE /api/reviews/:id - Delete review (only review author or admin)
-router.delete('/:id', protect, deleteReview);
-
-// POST /api/reviews/:id/helpful - Mark review as helpful
-router.post('/:id/helpful', protect, markHelpful);
-
-// POST /api/reviews/:id/unhelpful - Mark review as unhelpful
-router.post('/:id/unhelpful', protect, markUnhelpful);
-
-// GET /api/reviews/user/:userId - Get user's reviews
-router.get('/user/:userId', getUserReviews);
-
-/**
- * Admin routes (moderation)
- */
-// PUT /api/reviews/moderate/:id - Moderate review (admin only)
-router.put('/moderate/:id', protect, admin, moderateReview);
+// Admin
+router.get('/all', protect, admin, getUserReviews);
+router.put('/moderate/:reviewId', protect, admin, moderateReview);
 
 module.exports = router;

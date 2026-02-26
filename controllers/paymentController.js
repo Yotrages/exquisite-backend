@@ -3,6 +3,7 @@ const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const Cart = require("../Models/Cart");
 const { initializeTransaction, verifyTransaction } = require("../config/paystack");
+const { createNotification } = require('./notificationController');
 
 /**
  * Initialize Paystack payment
@@ -81,6 +82,10 @@ const initializePayment = async (req, res) => {
         reference: paystackResponse.data.reference,
         status: "pending",
       },
+      metadata: {
+        shippingAddress,
+        reference: paystackResponse.data.reference,
+      },
     });
 
     await payment.save();
@@ -143,7 +148,7 @@ const verifyPayment = async (req, res) => {
 
     await payment.save();
 
-    // Create order
+    // Create order - use stored shipping address from payment metadata
     const shippingAddress = payment.metadata?.shippingAddress || {};
     const orderDoc = new Order({
       user: userId,
@@ -173,6 +178,16 @@ const verifyPayment = async (req, res) => {
 
     // Clear user cart
     await Cart.deleteOne({ user: userId });
+
+    // Send order placed notification
+    const shortId = orderDoc._id.toString().slice(-8).toUpperCase();
+    createNotification(userId, {
+      type: 'order',
+      title: '🎉 Order Placed Successfully',
+      message: `Your order #${shortId} for ₦${orderDoc.totalPrice.toLocaleString()} has been placed and is being processed.`,
+      link: '/orders',
+      meta: { orderId: orderDoc._id },
+    }).catch(() => {});
 
     res.status(200).json({
       success: true,

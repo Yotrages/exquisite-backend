@@ -11,7 +11,7 @@ const getWishlist = async (req, res) => {
 
     let wishlist = await Wishlist.findOne({ user: userId }).populate({
       path: 'items.product',
-      select: 'name price category images rating inStock',
+      select: 'name price originalPrice discount category images image rating reviews inStock quantity',
     });
 
     // Create wishlist if doesn't exist
@@ -87,7 +87,7 @@ const removeFromWishlist = async (req, res) => {
       { new: true }
     ).populate({
       path: 'items.product',
-      select: 'name price category images rating inStock',
+      select: 'name price originalPrice discount category images image rating reviews inStock quantity',
     });
 
     if (!wishlist) {

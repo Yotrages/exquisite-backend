@@ -91,6 +91,7 @@ reviewSchema.post('save', async function () {
       {
         rating: parseFloat(avgRating.toFixed(1)),
         reviewsCount: reviews.length,
+        reviews: reviews.length,
       },
       { new: true }
     );
@@ -111,6 +112,7 @@ reviewSchema.post('deleteOne', async function () {
       {
         rating: parseFloat(avgRating.toFixed(1)),
         reviewsCount: reviews.length,
+        reviews: reviews.length,
       },
       { new: true }
     );
@@ -120,6 +122,7 @@ reviewSchema.post('deleteOne', async function () {
       {
         rating: 0,
         reviewsCount: 0,
+        reviews: 0,
       },
       { new: true }
     );

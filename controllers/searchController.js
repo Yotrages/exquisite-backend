@@ -90,7 +90,7 @@ const advancedSearch = async (req, res) => {
         filter,
         query ? { score: { $meta: 'textScore' } } : {}
       )
-        .select('name price category images rating reviewsCount inStock')
+        .select('name price image images category rating reviewsCount inStock description brand discount quantity')
         .sort(sortObj)
         .skip(skip)
         .limit(parseInt(limit))

@@ -18,6 +18,13 @@ const paymentSchema = new mongoose.Schema({
     status: { type: String },
     update_time: { type: String },
     email_address: { type: String },
+    reference: { type: String },
+    amount: { type: Number },
+    customer: { type: mongoose.Schema.Types.Mixed },
+  },
+  metadata: {
+    shippingAddress: { type: mongoose.Schema.Types.Mixed },
+    reference: { type: String },
   },
 }, { timestamps: true });
 

@@ -70,6 +70,10 @@ const productSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    reviewsCount: {
+        type: Number,
+        default: 0,
+    },
     inStock: {
         type: Boolean,
         default: function() {
@@ -85,6 +89,14 @@ const productSchema = new mongoose.Schema({
     lastUpdated: {
         type: Date,
         default: Date.now,
+    },
+    views: {
+        type: Number,
+        default: 0,
+    },
+    soldCount: {
+        type: Number,
+        default: 0,
     },
 });
 
@@ -102,6 +114,16 @@ productSchema.pre('save', function(next) {
 // Virtuals and JSON options
 productSchema.virtual('stock').get(function() {
     return this.quantity;
+});
+
+// averageRating alias for frontend compatibility
+productSchema.virtual('averageRating').get(function() {
+    return this.rating;
+});
+
+// totalReviews alias for frontend compatibility
+productSchema.virtual('totalReviews').get(function() {
+    return this.reviewsCount || this.reviews || 0;
 });
 
 productSchema.set('toJSON', { virtuals: true });
