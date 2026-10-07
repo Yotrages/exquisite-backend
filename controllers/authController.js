@@ -81,7 +81,7 @@ const handleOAuthCallback = async (req, res) => {
       return res.redirect(
         `${redirectBase}/${successRedirect}?token=${token}&type=login&id=${existingUser._id}&name=${encodeURIComponent(
           existingUser.name || ""
-        )}&email=${encodeURIComponent(existingUser.email || "")}&isAdmin=${encodeURIComponent(existingUser.isAdmin)}`
+        )}&isAdmin=${encodeURIComponent(existingUser.isAdmin)}`
       );
     }
 
