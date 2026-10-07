@@ -55,7 +55,7 @@ app.set('trust proxy', process.env.TRUST_PROXY || 'loopback');
 // Compression middleware - compress all responses
 app.use(compression());
 
-app.use(express.json());
+app.use(express.json({limit: '10mb', extended: false}));
 
 const allowedOrigins = [
   'http://localhost:5173',

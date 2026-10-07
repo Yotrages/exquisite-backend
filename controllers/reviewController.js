@@ -180,8 +180,20 @@ const deleteReview = async (req, res) => {
     }
 
     const productId = review.product;
-    await Review.deleteOne({ _id: reviewId });
+    await review.deleteOne();
     await deleteFromCache(`reviews:product:${productId}`);
+    // Recalculate product rating after delete
+    const remainingReviews = await Review.find({ product: productId, status: 'approved' }).lean();
+    if (remainingReviews.length > 0) {
+      const avgRating = remainingReviews.reduce((sum, r) => sum + r.rating, 0) / remainingReviews.length;
+      await Product.findByIdAndUpdate(productId, {
+        rating: parseFloat(avgRating.toFixed(1)),
+        reviewsCount: remainingReviews.length,
+        reviews: remainingReviews.length,
+      });
+    } else {
+      await Product.findByIdAndUpdate(productId, { rating: 0, reviewsCount: 0, reviews: 0 });
+    }
 
     res.json({ message: 'Review deleted successfully' });
   } catch (error) {

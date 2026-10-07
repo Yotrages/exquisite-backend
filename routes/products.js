@@ -430,7 +430,7 @@ router.get('/flash-deals', async (req, res) => {
     })
       .sort({ discount: -1, dateAdded: -1 })
       .limit(10)
-      .select('name price image discount quantity')
+      .select('name price image images discount quantity originalPrice rating reviewsCount brand')
 
     // Add originalPrice for display if available, otherwise compute
     const dealsWithOriginalPrice = flashDeals.map(deal => {
@@ -559,7 +559,7 @@ router.get('/trending', async (req, res) => {
     const trendingProducts = await Product.find({ quantity: { $gt: 0 } })
       .sort({ views: -1, soldCount: -1, rating: -1 })
       .limit(12)
-      .select('name price image images discount rating reviewsCount brand')
+      .select('name price image images discount originalPrice rating reviewsCount brand quantity')
 
     res.json(trendingProducts)
   } catch (error) {
