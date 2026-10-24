@@ -2,6 +2,7 @@ const Payment = require("../Models/Payment");
 const Order = require("../Models/Order");
 const Product = require("../Models/Product");
 const Cart = require("../Models/Cart");
+const crypto = require('crypto');
 const { initializeTransaction, verifyTransaction } = require("../config/paystack");
 const { createNotification } = require('./notificationController');
 
@@ -137,6 +138,24 @@ const verifyPayment = async (req, res) => {
       return res.status(404).json({ error: "Payment not found" });
     }
 
+    // Check if payment belongs to the user
+    if (payment.user.toString() !== userId.toString()) {
+      return res.status(403).json({ error: "Not authorized to verify this payment" });
+    }
+
+    // If already paid, check if order exists and return it (handles webhook race condition)
+    if (payment.isPaid) {
+      const existingOrder = await Order.findOne({ payment: payment._id }).populate("items.product");
+      if (existingOrder) {
+        return res.status(200).json({
+          success: true,
+          message: "Payment already verified",
+          order: existingOrder,
+          payment: payment,
+        });
+      }
+    }
+
     payment.isPaid = true;
     payment.paidAt = new Date();
     payment.paymentResult = {
@@ -148,46 +167,58 @@ const verifyPayment = async (req, res) => {
 
     await payment.save();
 
-    // Create order - use stored shipping address from payment metadata
-    const shippingAddress = payment.metadata?.shippingAddress || {};
-    const orderDoc = new Order({
-      user: userId,
-      items: payment.items,
-      shippingAddress,
-      paymentMethod: "paystack",
-      payment: payment._id,
-      itemsPrice: payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-      shippingPrice: payment.totalAmount - payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0) - (Math.round(payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 0.07 * 100) / 100),
-      taxPrice: Math.round(payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0) * 0.07 * 100) / 100,
-      totalPrice: payment.totalAmount,
-      isPaid: true,
-      paidAt: new Date(),
-      status: "processing",
-    });
+    // Check again if order was created by webhook (race condition protection)
+    let orderDoc = await Order.findOne({ payment: payment._id });
 
-    await orderDoc.save();
+    if (!orderDoc) {
+      // Create order - use stored shipping address from payment metadata
+      const shippingAddress = payment.metadata?.shippingAddress || {};
+      const itemsPrice = payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const taxPrice = Math.round(itemsPrice * 0.07 * 100) / 100;
+      const shippingPrice = itemsPrice > 50000 ? 0 : 1500;
 
-    // Update product inventory
-    for (const item of payment.items) {
-      await Product.findByIdAndUpdate(
-        item.product,
-        { $inc: { quantity: -item.quantity } },
-        { new: true }
-      );
+      orderDoc = new Order({
+        user: userId,
+        items: payment.items,
+        shippingAddress,
+        paymentMethod: "paystack",
+        payment: payment._id,
+        itemsPrice,
+        shippingPrice,
+        taxPrice,
+        totalPrice: payment.totalAmount,
+        isPaid: true,
+        paidAt: new Date(),
+        status: "processing",
+      });
+
+      await orderDoc.save();
+
+      // Update product inventory
+      for (const item of payment.items) {
+        await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { quantity: -item.quantity } },
+          { new: true }
+        );
+      }
+
+      // Clear user cart
+      await Cart.deleteOne({ user: userId });
+
+      // Send order placed notification
+      const shortId = orderDoc._id.toString().slice(-8).toUpperCase();
+      createNotification(userId, {
+        type: 'order',
+        title: '🎉 Order Placed Successfully',
+        message: `Your order #${shortId} for ₦${orderDoc.totalPrice.toLocaleString()} has been placed and is being processed.`,
+        link: '/orders',
+        meta: { orderId: orderDoc._id },
+      }).catch(() => {});
     }
 
-    // Clear user cart
-    await Cart.deleteOne({ user: userId });
-
-    // Send order placed notification
-    const shortId = orderDoc._id.toString().slice(-8).toUpperCase();
-    createNotification(userId, {
-      type: 'order',
-      title: '🎉 Order Placed Successfully',
-      message: `Your order #${shortId} for ₦${orderDoc.totalPrice.toLocaleString()} has been placed and is being processed.`,
-      link: '/orders',
-      meta: { orderId: orderDoc._id },
-    }).catch(() => {});
+    // Populate items for response
+    await orderDoc.populate("items.product");
 
     res.status(200).json({
       success: true,
@@ -269,9 +300,25 @@ const getAllPayments = async (req, res) => {
  */
 const handlePaystackWebhook = async (req, res) => {
   try {
+    // Verify webhook signature
+    const hash = crypto
+      .createHmac('sha512', process.env.PAYSTACK_SECRET_KEY)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+
+    const signature = req.headers['x-paystack-signature'];
+
+    // Use timing-safe comparison to prevent timing attacks
+    const hashBuffer = Buffer.from(hash);
+    const signatureBuffer = Buffer.from(signature);
+
+    if (hashBuffer.length !== signatureBuffer.length || !crypto.timingSafeEqual(hashBuffer, signatureBuffer)) {
+      console.error('Invalid webhook signature');
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+
     const event = req.body;
 
-    // Verify webhook signature (in production, verify the hash)
     if (event.event === "charge.success") {
       const reference = event.data.reference;
       const paymentData = event.data;
@@ -293,6 +340,55 @@ const handlePaystackWebhook = async (req, res) => {
 
         await payment.save();
         console.log("Payment confirmed via webhook:", reference);
+
+        // Create order if not already created (prevents duplicate orders from race condition)
+        const existingOrder = await Order.findOne({ payment: payment._id });
+        if (!existingOrder) {
+          // Create order - use stored shipping address from payment metadata
+          const shippingAddress = payment.metadata?.shippingAddress || {};
+          const itemsPrice = payment.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          const taxPrice = Math.round(itemsPrice * 0.07 * 100) / 100;
+          const shippingPrice = itemsPrice > 50000 ? 0 : 1500;
+
+          const orderDoc = new Order({
+            user: payment.user,
+            items: payment.items,
+            shippingAddress,
+            paymentMethod: "paystack",
+            payment: payment._id,
+            itemsPrice,
+            shippingPrice,
+            taxPrice,
+            totalPrice: payment.totalAmount,
+            isPaid: true,
+            paidAt: new Date(),
+            status: "processing",
+          });
+
+          await orderDoc.save();
+
+          // Update product inventory
+          for (const item of payment.items) {
+            await Product.findByIdAndUpdate(
+              item.product,
+              { $inc: { quantity: -item.quantity } },
+              { new: true }
+            );
+          }
+
+          // Clear user cart
+          await Cart.deleteOne({ user: payment.user });
+
+          // Send order placed notification
+          const shortId = orderDoc._id.toString().slice(-8).toUpperCase();
+          createNotification(payment.user, {
+            type: 'order',
+            title: '🎉 Order Placed Successfully',
+            message: `Your order #${shortId} for ₦${orderDoc.totalPrice.toLocaleString()} has been placed and is being processed.`,
+            link: '/orders',
+            meta: { orderId: orderDoc._id },
+          }).catch(() => {});
+        }
       }
     }
 

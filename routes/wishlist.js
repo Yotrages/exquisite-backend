@@ -39,8 +39,8 @@ router.post('/move-to-cart/:productId', protect, moveToCart);
 // GET /api/wishlist/price-drops - Get price drop notifications
 router.get('/price-drops', protect, getPriceDrops);
 
-// PUT /api/wishlist/notifications - Update notification settings
-router.put('/notifications', protect, updateNotificationSettings);
+// PUT /api/wishlist/notifications/:productId - Update notification settings for a product
+router.put('/notifications/:productId', protect, updateNotificationSettings);
 
 // PUT /api/wishlist/toggle-public - Toggle wishlist public/private
 router.put('/toggle-public', protect, togglePublicWishlist);

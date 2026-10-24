@@ -2,6 +2,7 @@ const express = require("express");
 const { protect, admin } = require("../middleware/authMiddleware");
 const { migrateProducts } = require('../controllers/migrationController');
 const { createNotification } = require('../controllers/notificationController');
+const { emitNotification, emitNotificationToAll, emitAdminNotification } = require('../socket');
 const User = require('../Models/User');
 const {
   getDashboardStats,
@@ -53,10 +54,40 @@ router.post('/notifications/send', protect, admin, async (req, res) => {
       const users = await User.find({ isAdmin: false }).select('_id').lean();
       const promises = users.map(u => createNotification(u._id, { type: type || 'promo', title, message, link }));
       await Promise.allSettled(promises);
+
+      // Emit broadcast event for real-time delivery
+      const notificationData = {
+        type: type || 'promo',
+        title,
+        message,
+        link: link || null,
+        read: false,
+        createdAt: new Date(),
+        meta: {},
+        broadcast: true,
+      };
+      emitNotificationToAll(notificationData);
+      emitAdminNotification(notificationData);
+
       return res.json({ success: true, message: `Notification sent to ${users.length} users` });
     }
     if (!userId) return res.status(400).json({ error: 'userId or broadcast required' });
-    await createNotification(userId, { type: type || 'system', title, message, link });
+    const notification = await createNotification(userId, { type: type || 'system', title, message, link });
+
+    // Emit admin notification for tracking
+    if (notification) {
+      emitAdminNotification({
+        type: type || 'system',
+        title,
+        message,
+        link: link || null,
+        read: false,
+        createdAt: new Date(),
+        meta: { userId: userId.toString() },
+        broadcast: false,
+      });
+    }
+
     res.json({ success: true, message: 'Notification sent' });
   } catch (error) {
     res.status(500).json({ error: error.message });

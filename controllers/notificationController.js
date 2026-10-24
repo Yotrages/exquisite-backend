@@ -1,5 +1,6 @@
 const NotificationPreferences = require('../Models/NotificationPreferences.js');
 const Notification = require('../Models/Notification.js');
+const { emitNotification, emitNotificationToAll } = require('../socket');
 
 /**
  * Get user's notification preferences
@@ -268,6 +269,20 @@ const createNotification = async (userId, { type, title, message, link, meta } =
       meta: meta || {},
     });
     await notification.save();
+
+    // Emit real-time notification
+    const notificationData = {
+      _id: notification._id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      link: notification.link,
+      read: notification.read,
+      createdAt: notification.createdAt,
+      meta: notification.meta,
+    };
+    emitNotification(userId.toString(), notificationData);
+
     return notification;
   } catch (error) {
     console.error('Failed to create notification:', error.message);

@@ -1,5 +1,7 @@
 const express = require("express");
 const Product = require("../Models/Product");
+const Wishlist = require("../Models/Wishlist");
+const User = require("../Models/User");
 const multer = require("multer");
 const jwt = require("jsonwebtoken");
 const sharp = require("sharp");
@@ -7,6 +9,7 @@ const ffmpeg = require("fluent-ffmpeg");
 const path = require("path");
 const fs = require("fs").promises;
 const cloudinary = require("../config/cloudinary");
+const { createNotification } = require("../controllers/notificationController");
 
 const router = express.Router();
 
@@ -275,7 +278,13 @@ router.put("/put/:id", verifyAdmin, upload.single("image"), compressFile, async 
   try {
     const { id } = req.params;
     const { name, description, price, quantity, category, sku, tags, originalPrice, discount, brand, specifications, seller, inStock } = req.body;
-    
+
+    // Fetch current product before update for comparison
+    const currentProduct = await Product.findById(id);
+    if (!currentProduct) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
     let imageUrl;
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.originalname);
@@ -323,14 +332,84 @@ router.put("/put/:id", verifyAdmin, upload.single("image"), compressFile, async 
       updatedFields.price = Math.round((parsedOriginalPrice * (1 - (parsedDiscount/100))) * 100) / 100;
     }
 
+    // Calculate new price for comparison
+    let newPrice = currentProduct.price;
+    if (price !== undefined) {
+      newPrice = parseFloat(price);
+    } else if (parsedOriginalPrice !== undefined && parsedDiscount !== undefined && parsedDiscount > 0) {
+      newPrice = Math.round((parsedOriginalPrice * (1 - (parsedDiscount/100))) * 100) / 100;
+    }
+
+    const newQuantity = quantity !== undefined ? Number(quantity) : currentProduct.quantity;
+    const wasOutOfStock = currentProduct.quantity === 0;
+    const isNowInStock = newQuantity > 0;
+
     const result = await Product.findByIdAndUpdate(id, updatedFields, { new: true });
 
     if (!result) {
       return res.status(404).json({ success: false, message: "Product not found" });
     }
 
-    res.status(200).json({ 
-      success: true, 
+    // Trigger notifications after successful update
+    try {
+      // Price drop notification
+      if (newPrice < currentProduct.price) {
+        const priceDropPercent = Math.round(((currentProduct.price - newPrice) / currentProduct.price) * 100);
+
+        // Find users who have this product in wishlist with price drop notifications enabled
+        const wishlists = await Wishlist.find({
+          'items.product': id,
+          'items.notifyOnPriceDrop': true,
+          $or: [
+            { 'items.priceDropThreshold': { $lte: priceDropPercent } },
+            { 'items.priceDropThreshold': 0 }
+          ]
+        }).populate('user', '_id');
+
+        const notifiedUsers = new Set();
+        for (const wishlist of wishlists) {
+          const item = wishlist.items.find(i => i.product.toString() === id && i.notifyOnPriceDrop);
+          if (item && (!item.priceDropThreshold || priceDropPercent >= item.priceDropThreshold)) {
+            if (!notifiedUsers.has(wishlist.user._id.toString())) {
+              notifiedUsers.add(wishlist.user._id.toString());
+              await createNotification(wishlist.user._id, {
+                type: 'price_drop',
+                title: '💰 Price Drop Alert!',
+                message: `"${result.name}" is now ${priceDropPercent}% off! Was ₦${currentProduct.price.toLocaleString()}, now ₦${newPrice.toLocaleString()}.`,
+                link: `/product/${id}`,
+                meta: { productId: id, oldPrice: currentProduct.price, newPrice, dropPercent: priceDropPercent },
+              });
+            }
+          }
+        }
+      }
+
+      // Restock notification
+      if (wasOutOfStock && isNowInStock) {
+        // Find users who have this product in wishlist
+        const wishlists = await Wishlist.find({ 'items.product': id }).populate('user', '_id');
+
+        const notifiedUsers = new Set();
+        for (const wishlist of wishlists) {
+          if (!notifiedUsers.has(wishlist.user._id.toString())) {
+            notifiedUsers.add(wishlist.user._id.toString());
+            await createNotification(wishlist.user._id, {
+              type: 'restock',
+              title: '📦 Back in Stock!',
+              message: `Good news! "${result.name}" is back in stock. Only ${newQuantity} left - grab it before it's gone!`,
+              link: `/product/${id}`,
+              meta: { productId: id, quantity: newQuantity },
+            });
+          }
+        }
+      }
+    } catch (notificationError) {
+      console.error('Failed to send product notifications:', notificationError);
+      // Don't fail the request if notifications fail
+    }
+
+    res.status(200).json({
+      success: true,
       product: result,
       ...(req.file && {
         compressionInfo: {

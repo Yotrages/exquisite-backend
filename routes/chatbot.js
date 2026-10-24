@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const Order = require('../Models/Order');
 const Product = require('../Models/Product');
-const { createChatCompletion } = require('../utils/openai');
+const { createChatCompletion } = require('../utils/gemini');
 const { logChat, redactPII } = require('../utils/chatLogger');
 
 // Chatbot with optional OpenAI fallback
@@ -28,13 +28,13 @@ router.post('/chat', require('../middleware/rateLimiters').chatbotLimiter, async
           { role: 'user', content: message }
         ];
 
-        const aiResult = await createChatCompletion({ messages, model: model || 'gpt-3.5-turbo', temperature: temperature ?? 0.6, max_tokens: max_tokens ?? 400 });
+        const aiResult = await createChatCompletion({ messages, model: model || 'gemini-1.5-flash', temperature: temperature ?? 0.6, max_tokens: max_tokens ?? 400 });
         const assistantMessage = aiResult?.choices?.[0]?.message?.content;
 
         if (assistantMessage) {
           // Log the interaction asynchronously (do not block response on logging)
-          logChat({ userId: req.user?._id, ip: req.ip, message, response: assistantMessage, source: 'openai' });
-          return res.json({ reply: assistantMessage, suggestions: [] , source: 'openai' });
+          logChat({ userId: req.user?._id, ip: req.ip, message, response: assistantMessage, source: 'gemini' });
+          return res.json({ reply: assistantMessage, suggestions: [] , source: 'gemini' });
         }
         // if AI failed to return a message, fall through to rule-based
       } catch (aiErr) {

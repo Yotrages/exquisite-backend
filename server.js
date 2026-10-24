@@ -1,9 +1,10 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const compression = require('compression');
+const { createServer } = require('http');
 const connectDB = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
-const productRoutes = require('./routes/products'); 
+const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const paymentRoutes = require('./routes/Payments');
 const orderRoutes = require('./routes/orders');
@@ -24,7 +25,7 @@ const passport = require('passport');
 const session = require('express-session');
 const configurePassport = require('./config/passport');
 const { cacheMiddleware, cacheInvalidatorMiddleware } = require('./middleware/cacheMiddleware');
- const chatbotRoutes = require('./routes/chatbot');
+const chatbotRoutes = require('./routes/chatbot');
 const {
   globalLimiter,
   strictLimiter,
@@ -36,17 +37,23 @@ const {
   publicLimiter,
 } = require('./middleware/rateLimiters');
 
+// Socket.io
+const { initializeSocket } = require('./socket');
 
-dotenv.config();
-console.log('JWT Secret:', process.env.JWT_SECRET_TOKEN);
+
+dotenv.process.env.JWT_SECRET_TOKEN;
 const initializeApp = async () => {
-    await connectDB(); 
+    await connectDB();
   };
-  
+
   initializeApp();
   configurePassport()
 
 const app = express();
+const httpServer = createServer(app);
+
+// Initialize Socket.io
+initializeSocket(httpServer);
 
 // Trust proxy - configure based on deployment environment
 // This ensures rate limiting works correctly behind load balancers
@@ -129,4 +136,4 @@ app.use('/api/ai', aiRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));

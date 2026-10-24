@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
-const { createChatCompletion } = require('../utils/openai');
+const { createChatCompletion } = require('../utils/gemini');
 const { logChat } = require('../utils/chatLogger');
 const { chatbotLimiter } = require('../middleware/rateLimiters');
 
