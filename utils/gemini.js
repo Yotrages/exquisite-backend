@@ -9,7 +9,7 @@ if (!apiKey) {
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
 // Configurable timeout (ms): default 30s for AI responses to avoid hanging
-const DEFAULT_GEMINI_TIMEOUT = process.env.GEMINI_TIMEOUT_MS ? parseInt(process.env.GEMINI_TIMEOUT_MS, 10) : 30000;
+const DEFAULT_GEMINI_TIMEOUT = process.env.GEMINI_TIMEOUT_MS ? parseInt(process.env.GEMINI_TIMEOUT_MS, 10) : 300000;
 
 async function createChatCompletion({ messages, model = 'gemini-1.5-flash', temperature = 0.7, max_tokens = 1024 }) {
   if (!genAI) throw new Error('GEMINI_API_KEY is not configured');
