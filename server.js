@@ -41,7 +41,8 @@ const {
 const { initializeSocket } = require('./socket');
 
 
-dotenv.process.env.JWT_SECRET_TOKEN;
+// Load environment variables
+dotenv.config();
 const initializeApp = async () => {
     await connectDB();
   };
